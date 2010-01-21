@@ -210,8 +210,9 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False ):
 
     # get existing entries
     db_timelines = dbh.fetchall("""select * from timelines 
-                                      where datestop >= '%s' and datestart <= '%s'"""
-                                   % ( timelines[0]['datestart'], timelines[-1]['datestop'] ))
+                                   where datestop >= '%s' and datestart <= '%s'
+                                   order by datestart 
+                                   """ % ( timelines[0]['datestart'], timelines[-1]['datestop'] ))
        
     from itertools import count, izip
     if len(db_timelines) > 0:
@@ -413,8 +414,9 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
-    db_loads = dbh.fetchall("select * from load_segments where datestart >= '%s' and datestart <= '%s'"
-                           % ( ifot_loads[0]['datestart'],
+    db_loads = dbh.fetchall("""select * from load_segments 
+                               where datestart >= '%s' and datestart <= '%s'
+                               order by datestart """ % ( ifot_loads[0]['datestart'],
                                ifot_loads[-1]['datestop'],
                                )
                            )
@@ -511,7 +513,6 @@ def main():
     log.addHandler(ch)
     if opt.dryrun:
         log.info("LOAD_SEG INFO: Running in dryrun mode")
-#        dbh = DBI(dbi='sybase', server='sybase', user='aca_read', database='aca')   
     loadseg_dir = opt.loadseg_rdb_dir
     # get the loads from the arc ifot area
     all_rdb_files = glob.glob(os.path.join(loadseg_dir, "*"))
@@ -522,9 +523,11 @@ def main():
     if len(ifot_loads):
         update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
         
-        db_loads = dbh.fetchall("select * from load_segments where datestart >= '%s' and datestart <= '%s'"
-                                    % ( ifot_loads[0]['datestart'],
-                                        ifot_loads[-1]['datestop'],
+        db_loads = dbh.fetchall("""select * from load_segments 
+                                   where datestart >= '%s' and datestart <= '%s'
+                                   order by datestart   
+                                  """ % ( ifot_loads[0]['datestart'],
+                                          ifot_loads[-1]['datestop'],
                                         )
                                     )    
         update_timelines_db( loads = db_loads, dbh=dbh, dryrun=opt.dryrun )
