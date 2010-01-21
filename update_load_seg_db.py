@@ -37,6 +37,9 @@ def get_options():
     parser.add_option("--dryrun",
                       action='store_true',
                       help="Do not perform real database updates")
+    parser.add_option("--test",
+                      action='store_true',
+                      help="In test mode, allow changes to db before 2009...")
     parser.add_option("-v", "--verbose",
                       action='store_true',
                       )
@@ -159,6 +162,7 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False ):
 
     as_run = loads
     as_run = sorted(as_run, key=lambda k: k['datestart'])
+
     log.info("TIMELINES INFO: Updating timelines for range %s to %s" 
              % ( as_run[0]['datestart'], as_run[-1]['datestop']))
 
@@ -173,8 +177,11 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False ):
         try:
             ref_timelines.append( pre_query_fetch.next() )
         except StopIteration:
-            log.warn("""TIMELINES WARN: only found %i of %i timelines before current insert"""
-                     % (cnt-1, 10))
+            if (cnt == 0):
+                log.warn("""TIMELINES WARN: no timelines found before current insert""")
+            else:
+                log.warn("""TIMELINES WARN: only found %i of %i timelines before current insert"""
+                         % (cnt-1, 10))
             break
     ref_timelines = sorted(ref_timelines, key=lambda k: k['datestart'])
     
@@ -381,12 +388,13 @@ def get_last_timeline(dbh=None):
                                
 
 
-def update_loads_db( ifot_loads, dbh=None, dryrun=False):
+def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
     """
     Update the load_segments table with the loads from an RDB file.
 
     :param ifot_loads: recarray of ifot run loads 
-    :param dryrun: do not update database
+    :param test: allow writes of < year 2009 data 
+    :param dryrun: do not write to the database
     :rtype: list of new loads
     """
     
@@ -401,7 +409,7 @@ def update_loads_db( ifot_loads, dbh=None, dryrun=False):
         
     # Tom doesn't want < year 2009 load segments to change ids etc
     min_time_datestart ='2009:001:00:00:00.000'
-    if (ifot_loads[0]['datestart'] < min_time_datestart):
+    if (ifot_loads[0]['datestart'] < min_time_datestart) and not test:
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
@@ -410,7 +418,7 @@ def update_loads_db( ifot_loads, dbh=None, dryrun=False):
                                ifot_loads[-1]['datestop'],
                                )
                            )
-
+    
     # if no overlap on time range, check for an empty table (which should be OK)
     if len(db_loads) == 0:
         count_all_db_loads = dbh.fetchall("select count(*) as all_count from load_segments")
@@ -512,7 +520,7 @@ def main():
     orig_rdb_loads = Ska.Table.read_ascii_table(rdb_file, datastart=3)
     ifot_loads = rdb_to_db_schema( orig_rdb_loads )
     if len(ifot_loads):
-        update_loads_db( ifot_loads, dbh=dbh, dryrun=opt.dryrun )    
+        update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
         
         db_loads = dbh.fetchall("select * from load_segments where datestart >= '%s' and datestart <= '%s'"
                                     % ( ifot_loads[0]['datestart'],
