@@ -47,10 +47,10 @@ def main():
 
     # use local versions of the files in this project and the REAL_SKA versions of others
     for sqldef in ('load_segments', 'timelines', 'timeline_loads', 'tl_dep',
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_fltpars')
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_intpars')
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmds')
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_states')
+                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_fltpars'),
+                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_intpars'),
+                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmds'),
+                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_states'),
                    ):
         cmd = file(sqldef + '_def.sql').read()
         db.execute(cmd, commit=True)
@@ -69,12 +69,13 @@ def main():
                                                                DateTime(opt.tstop).date ))
 
     for ls in load_segments:
-        print 'Inserting ls %d:%s' % (ls['year'], ls['load_segment'])
+#        print 'Inserting ls %d:%s' % (ls['year'], ls['load_segment'])
         db.insert(ls, 'load_segments')
 
     for tl in timelines:
-        print 'Insert tl %s %s %d' % (tl['datestart'], tl['datestop'], tl['id'])
+#        print 'Insert tl %s %s %d' % (tl['datestart'], tl['datestop'], tl['id'])
         db.insert(tl, 'timelines')
+
 
     db.commit()
 

@@ -25,7 +25,9 @@ def main():
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
-    timelines_test.run_model( opt, dbfilename )
+#    timelines_test.run_model( opt, dbfilename )
+    print dbfilename
+    timelines_test.cmp_states( opt, dbfilename )
 
 
 if __name__ == '__main__':

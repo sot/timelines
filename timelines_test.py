@@ -113,8 +113,9 @@ def make_table( dbfilename, opt=None):
 
     if not os.path.exists( dbfilename ):
         # tstart = tstop to get no import of tables
-        bash_shell( './make_new_tables.py --server %s --tstart %s --tstop %s' % 
-                    ( dbfilename , opt.tstop, opt.tstop ))
+        make_new_tables = os.path.join(os.environ['SKA'], 'share', 'timelines', 'make_new_tables.py')
+        bash_shell( '%s --server %s --tstart %s --tstop %s' % 
+                    ( make_new_tables, dbfilename , opt.tstop, opt.tstop ))
 
 
 def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
@@ -126,13 +127,15 @@ def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
     Build states
     """
 
-    bash_shell( './parse_cmd_load_gen.pl --touch_file %s --mp_dir %s --server %s' %
-                ( os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
+    parse_cmd = os.path.join(os.environ['SKA'], 'share', 'timelines', 'parse_cmd_load_gen.pl')
+    bash_shell( '%s --touch_file %s --mp_dir %s --server %s' %
+                ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
 
-#    bash_shell( './update_load_seg_db.py --test --server %s --loadseg_rdb_dir %s --verbose' %
+    update_load_seg = os.path.join(os.environ['SKA'], 'share', 'timelines', 'update_load_seg_db.py')
+    bash_shell( '%s --test --server %s --loadseg_rdb_dir %s --verbose' %
+                ( update_load_seg, dbfilename, load_dir ))
+#    bash_shell( './broken_load_seg_db.py --server %s --loadseg_rdb_dir %s ' %
 #                ( dbfilename, load_dir ))
-    bash_shell( './broken_load_seg_db.py --server %s --loadseg_rdb_dir %s ' %
-                ( dbfilename, load_dir ))
 
 
     # update_cmd_states backs up to the first NPNT before the given tstart...
@@ -162,17 +165,66 @@ def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
 #    bash_shell( "/proj/gads6/jeanproj/cmd_states/update_cmd_states.py --datestart '%s' --server %s" %
 #                (cmd_state_datestart, dbfilename))
     print "Adding Nonload Commands"
-    bash_shell("/proj/sot/ska/share/cmd_states/nonload_cmds_archive.py --server %s " % dbfilename )
+    nonload_cmds = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'nonload_cmds_archive.py')
+    bash_shell("%s --server %s " % (nonload_cmds, dbfilename ))
 
     print "Updating States from %s" % cmd_state_datestart
-    bash_shell( "/proj/gads6/jeanproj/cmd_states/update_cmd_states.py --datestart '%s' --server %s" %
-                (cmd_state_datestart, dbfilename))
+    update_cmd_states = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'update_cmd_states.py')
+    bash_shell( "%s --datestart '%s' --server %s" %
+                (update_cmd_states, cmd_state_datestart, dbfilename))
 
     return dbfilename
 
 
-def cmp_states(states, db_states):
-    pass
+def write_states( states, outfile):
+    """Write states recarray to file states.dat"""
+    
+    out = open(outfile, 'w')
+    fmt = {'power': '%.1f',
+           'pitch': '%.2f',
+           'tstart': '%.2f',
+           'tstop': '%.2f',
+           'ra': '%.2f',
+           'dec' : '%.2f',
+           'roll' : '%.2f',
+           'q1' : '%.2f',
+           'q2' : '%.2f',
+           'q3' : '%.2f',
+           'q4' : '%.2f',
+           }
+    newcols = list(states.dtype.names)
+    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
+    newstates = np.rec.fromarrays([states[x] for x in newcols], names=newcols)
+    import Ska.Numpy
+    Ska.Numpy.pprint(newstates, fmt, out)
+    out.close()
+    
+
+def cmp_states(opt, dbfile ):
+
+
+    loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
+    datestart = loads[0]['TStart (GMT)']
+    datestop = loads[-1]['TStop (GMT)']
+    
+    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True, verbose=opt.verbose )
+    test_states = db.fetchall("""select * from cmd_states
+                            where datestart >= '%s'
+                            and datestart <= '%s'
+                            order by datestart""" % (datestart, datestop ))
+    write_states( test_states, os.path.join(opt.outdir, 'test_states.dat'))
+
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=True)    
+    acadb_states = acadb.fetchall("""select * from cmd_states
+                            where datestart >= '%s'
+                            and datestart <= '%s'
+                            order by datestart""" % (datestart, datestop ))
+    write_states(acadb_states, os.path.join(opt.outdir, 'acadb_states.dat'))
+
+
+                  
+
+#    pass
 #    if len(db_states) > 0:
 #         # Get states columns that are not float type. descr gives list of (colname, type_descr)
 #        match_cols = [x[0] for x in states.dtype.descr if 'f' not in x[1]]
@@ -245,8 +297,8 @@ def run_model(opt, dbfile):
 
     db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True, verbose=opt.verbose )
     # Add psmc dirs
-    psmc_dir = os.path.join('/proj/gads6/jeanproj', 'psmc-8.6.0')
-    sys.path.append(psmc_dir)
+#    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
+#    sys.path.append(psmc_dir)
     import Chandra.cmd_states as cmd_states
     import Ska.TelemArchive.fetch
     import numpy as np
