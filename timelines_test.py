@@ -29,30 +29,35 @@ def load_to_dir( week ):
     return dir
 
 
-def test_data_setup( opt ):    
+def test_data_setup( load_rdb=None, outdir=tempfile.mkdtemp(), 
+                     tstart=None, tstop=None,  verbose=False ):    
     """
-    Read a load segment rdb file
+    Read a load segment rdb file or a tstart/tstop combination
     Figure out which MP directories will be needed
     Make a link tree to those in the output directory
     Copy over the rdb to another directory in that output directory
     Return the directories
+
+    :param load_rdb: rdb file with load segments from arc/get_iFOT_events
+    :param outdir: output directory
+    :param tstart: earliest mission planning directory time if working in timerange mode
+    :param tstop: latest mission planning directory time if working in timerange mode
+    :param verbose:
+
+    :rtype: tuple (<output dir>, <mock MP dir>, <mock load seg rdb dir>)
+
     """
     
-    if opt.load_rdb is None:
-        raise ValueError('load_rdb should be supplied as option')
-    outdir = opt.outdir
-    if outdir is None:
-        outdir = tempfile.mkdtemp()
-    if opt.tstart:
-        tstart = DateTime(opt.tstart)
-    if opt.tstop:
-        tstop = DateTime(opt.tstop)
-    if opt.load_rdb:
-        # cheat, and use the db to get the smallest range that contains
+    if tstart:
+        tstart = DateTime(tstart)
+    if tstop:
+        tstop = DateTime(tstop)
+    if load_rdb:
+        # cheat, and use the real db to get the smallest range that contains
         # all the MP dirs that are listed in the rdb file in the LOADSEG.LOAD_NAME
         # field
-        loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
-        db = Ska.DBI.DBI(dbi='sybase', numpy=True, verbose=opt.verbose)
+        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+        db = Ska.DBI.DBI(dbi='sybase', numpy=True, verbose=verbose)
         sumfile_modtimes = []
         for week in np.unique(loads['LOADSEG.LOAD_NAME']):
             week_dir = load_to_dir(week)
@@ -62,17 +67,21 @@ def test_data_setup( opt ):
             sumfile_modtimes.append(time_matches[0]['sumfile_modtime'])
         start = min(sumfile_modtimes)
         stop = max(sumfile_modtimes)
-        opt.tstart = DateTime( start, format='unix').date
-        opt.tstop = DateTime( stop, format='unix').date
-        if opt.verbose:
+        tstart = DateTime( start, format='unix').date
+        tstop = DateTime( stop, format='unix').date
+        if verbose:
             print "Fetching mp dirs from %s to %s " % (
-                opt.tstart, opt.tstop)
+                tstart, tstop)
         match_query = """select * from tl_processing
                          where sumfile_modtime >= %s
                          and sumfile_modtime <= %s """ % ( start, stop)
         matches = db.fetchall(match_query)
         match_files = matches.dir
+
     else:
+        if (not tstart) or (not tstop):
+            raise ValueError("""No load_rdb *and* no time range (tstart,tstop) specified
+                                Need one or the other""")
         # otherwise, hope the user gave a tstart and tstop and just find the directories
         # that match that range
         import glob
@@ -95,36 +104,57 @@ def test_data_setup( opt ):
             newname = os.path.join( outdir, 'mp', year, week, rev )
             if not os.path.exists(newname):
                 os.symlink(oldname, newname)
-                if opt.verbose:
+                if verbose:
                     print "Linking %s -> %s" % (oldname, newname )
 
     # copy over load file
     from shutil import copy
     if not os.path.exists(os.path.join(outdir, 'loads')):
         os.mkdir(os.path.join(outdir, 'loads'))
-    copy( opt.load_rdb, os.path.join(outdir, 'loads'))
+
+    if load_rdb:
+        copy( load_rdb, os.path.join(outdir, 'loads'))
 
     return ( outdir, os.path.join(outdir, 'loads'), os.path.join(outdir, 'mp'))
 
-def make_table( dbfilename, opt=None):
+
+def make_table( dbfilename, tstart=None, tstop=None):
     """ 
     Initialize tables
+
+    Use the make_new_tables script to initialize new tables and copy over rows from the 
+    "real" sybase tables as needed.
+
+    :param dbfilename: sqlite destination db file
+    :param tstart: start of range to copy from sybase
+    :param tstart: stop of range to copy from sybase
+
     """
-
     if not os.path.exists( dbfilename ):
-        # tstart = tstop to get no import of tables
-        make_new_tables = os.path.join(os.environ['SKA'], 'share', 'timelines', 'make_new_tables.py')
-        bash_shell( '%s --server %s --tstart %s --tstop %s' % 
-                    ( make_new_tables, dbfilename , opt.tstop, opt.tstop ))
+#        make_new_tables = os.path.join(os.environ['SKA'], 'share', 'timelines', 'make_new_tables.py')
+        make_new_tables = "./make_new_tables.py"
+        cmd = "%s --server %s " % ( make_new_tables, dbfilename )
+        if tstart:
+            cmd += " --tstart %s " % DateTime(tstart).date
+        if tstop:
+            cmd += " --tstop %s " % DateTime(tstop).date
+        bash_shell(cmd)
 
 
-def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
+def make_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
     """
     From the available directories and load segment file
     Populate a load segments table and a timelines table
     Insert the nonload commands
     Insert a handful of states from the real database to seed the commands states
     Build states
+
+    :param outdir: output/source/working directory
+    :param load_seg_dir: dir with load segment rdb files
+    :param mp_dir:  mock or real MP directory
+    :param dbfilename: sqlite db file for test database
+    :param verbose:
+
     """
 
     parse_cmd = os.path.join(os.environ['SKA'], 'share', 'timelines', 'parse_cmd_load_gen.pl')
@@ -133,7 +163,7 @@ def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
 
     update_load_seg = os.path.join(os.environ['SKA'], 'share', 'timelines', 'update_load_seg_db.py')
     bash_shell( '%s --test --server %s --loadseg_rdb_dir %s --verbose' %
-                ( update_load_seg, dbfilename, load_dir ))
+                ( update_load_seg, dbfilename, load_seg_dir ))
 #    bash_shell( './broken_load_seg_db.py --server %s --loadseg_rdb_dir %s ' %
 #                ( dbfilename, load_dir ))
 
@@ -144,10 +174,10 @@ def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
     # so copy over states from the real db, starting at the start of this
     # timelines timerange until we hit first NPNT state
     # and use the time just after that state as the start of update_cmd_states
-    testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfilename, verbose=opt.verbose )
+    testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfilename, verbose=verbose )
     first_timeline = testdb.fetchone("select datestart from timelines")
 
-    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=True)
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=verbose)
     es_query = """select * from cmd_states
                   where datestop > '%s'
                   order by datestart asc""" % first_timeline['datestart'] 
@@ -176,10 +206,10 @@ def make_states( outdir, load_dir, mp_dir, dbfilename, opt=None ):
     return dbfilename
 
 
-def write_states( states, outfile):
+def string_states( states):
     """Write states recarray to file states.dat"""
     
-    out = open(outfile, 'w')
+#    out = open(outfile, 'w')
     fmt = {'power': '%.1f',
            'pitch': '%.2f',
            'tstart': '%.2f',
@@ -196,8 +226,10 @@ def write_states( states, outfile):
     newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
     newstates = np.rec.fromarrays([states[x] for x in newcols], names=newcols)
     import Ska.Numpy
-    Ska.Numpy.pprint(newstates, fmt, out)
-    out.close()
+    statestring = Ska.Numpy.pformat(newstates, fmt)
+    return statestring.splitlines(True)
+#    Ska.Numpy.pprint(newstates, fmt, out)
+#    out.close()
     
 
 def cmp_states(opt, dbfile ):
@@ -212,15 +244,28 @@ def cmp_states(opt, dbfile ):
                             where datestart >= '%s'
                             and datestart <= '%s'
                             order by datestart""" % (datestart, datestop ))
-    write_states( test_states, os.path.join(opt.outdir, 'test_states.dat'))
+    test_lines = string_states( test_states )
+    ts = open(os.path.join(opt.outdir, 'test_states.dat'), 'w')
+    ts.writelines(test_lines)
+    ts.close()
 
     acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=True)    
     acadb_states = acadb.fetchall("""select * from cmd_states
                             where datestart >= '%s'
                             and datestart <= '%s'
                             order by datestart""" % (datestart, datestop ))
-    write_states(acadb_states, os.path.join(opt.outdir, 'acadb_states.dat'))
+    db_lines = string_states(acadb_states)
+    ds = open(os.path.join(opt.outdir, 'acadb_states.dat'), 'w')
+    ds.writelines(db_lines)
+    ds.close()
 
+    import difflib
+    diff_out = open(os.path.join(opt.outdir, 'diff.html'), 'w')
+    htmldiff = difflib.HtmlDiff()
+    htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
+    diff = htmldiff.make_file( db_lines, test_lines, context=True )
+    diff_out.writelines(diff)
+    
 
                   
 
@@ -297,8 +342,8 @@ def run_model(opt, dbfile):
 
     db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True, verbose=opt.verbose )
     # Add psmc dirs
-#    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
-#    sys.path.append(psmc_dir)
+    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
+    sys.path.append(psmc_dir)
     import Chandra.cmd_states as cmd_states
     import Ska.TelemArchive.fetch
     import numpy as np
@@ -320,7 +365,7 @@ def run_model(opt, dbfile):
 
     tlm = np.rec.fromrecords( vals, names=colnames )
     import psmc_check
-    plots_validation = psmc_check.make_validation_plots( opt, tlm, db )
+    plots_validation = psmc_check.make_validation_plots( opt.outdir, tlm, db )
     valid_viols = psmc_check.make_validation_viols(plots_validation)
     import characteristics
     MSID = dict(dea='1PDEAAT', pin='1PIN1AT')
