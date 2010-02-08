@@ -29,10 +29,10 @@ def load_to_dir( week ):
     return dir
 
 
-def test_data_setup( load_rdb=None, outdir=tempfile.mkdtemp(), 
-                     tstart=None, tstop=None,  verbose=False ):    
+def test_data_setup( load_rdb, outdir=tempfile.mkdtemp(), 
+                     verbose=False ):    
     """
-    Read a load segment rdb file or a tstart/tstop combination
+    Read a load segment rdb file
     Figure out which MP directories will be needed
     Make a link tree to those in the output directory
     Copy over the rdb to another directory in that output directory
@@ -40,58 +40,37 @@ def test_data_setup( load_rdb=None, outdir=tempfile.mkdtemp(),
 
     :param load_rdb: rdb file with load segments from arc/get_iFOT_events
     :param outdir: output directory
-    :param tstart: earliest mission planning directory time if working in timerange mode
-    :param tstop: latest mission planning directory time if working in timerange mode
     :param verbose:
 
     :rtype: tuple (<output dir>, <mock MP dir>, <mock load seg rdb dir>)
 
     """
     
-    if tstart:
-        tstart = DateTime(tstart)
-    if tstop:
-        tstop = DateTime(tstop)
-    if load_rdb:
-        # cheat, and use the real db to get the smallest range that contains
-        # all the MP dirs that are listed in the rdb file in the LOADSEG.LOAD_NAME
-        # field
-        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
-        db = Ska.DBI.DBI(dbi='sybase', numpy=True, verbose=verbose)
-        sumfile_modtimes = []
-        for week in np.unique(loads['LOADSEG.LOAD_NAME']):
-            week_dir = load_to_dir(week)
-            time_query = """select sumfile_modtime from tl_processing 
-                            where dir = "%s" """ % ( week_dir )
-            time_matches = db.fetchall(time_query)
-            sumfile_modtimes.append(time_matches[0]['sumfile_modtime'])
-        start = min(sumfile_modtimes)
-        stop = max(sumfile_modtimes)
-        tstart = DateTime( start, format='unix').date
-        tstop = DateTime( stop, format='unix').date
-        if verbose:
-            print "Fetching mp dirs from %s to %s " % (
-                tstart, tstop)
-        match_query = """select * from tl_processing
-                         where sumfile_modtime >= %s
-                         and sumfile_modtime <= %s """ % ( start, stop)
-        matches = db.fetchall(match_query)
-        match_files = matches.dir
+    # cheat, and use the real db to get the smallest range that contains
+    # all the MP dirs that are listed in the rdb file in the LOADSEG.LOAD_NAME
+    # field
+    loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+    db = Ska.DBI.DBI(dbi='sybase', numpy=True, verbose=verbose)
+    sumfile_modtimes = []
+    for week in np.unique(loads['LOADSEG.LOAD_NAME']):
+        week_dir = load_to_dir(week)
+        time_query = """select sumfile_modtime from tl_processing 
+                        where dir = "%s" """ % ( week_dir )
+        time_matches = db.fetchall(time_query)
+        sumfile_modtimes.append(time_matches[0]['sumfile_modtime'])
+    start = min(sumfile_modtimes)
+    stop = max(sumfile_modtimes)
+    tstart = DateTime( start, format='unix').date
+    tstop = DateTime( stop, format='unix').date
+    if verbose:
+        print "Fetching mp dirs from %s to %s " % (
+            tstart, tstop)
+    match_query = """select * from tl_processing
+                     where sumfile_modtime >= %s
+                     and sumfile_modtime <= %s """ % ( start, stop)
+    matches = db.fetchall(match_query)
+    match_files = matches.dir
 
-    else:
-        if (not tstart) or (not tstop):
-            raise ValueError("""No load_rdb *and* no time range (tstart,tstop) specified
-                                Need one or the other""")
-        # otherwise, hope the user gave a tstart and tstop and just find the directories
-        # that match that range
-        import glob
-        all_files = glob.glob(os.path.join(MP_DIR, '????', '???????', 'ofls?', 'mps', 'C???_????.sum'))
-        match_files = []
-        for file in all_files:
-            s = os.stat(file)
-            if ((s.st_mtime >= tstart.unix) and (s.st_mtime < tstop.unix )):
-                match_files.append(file)
-    
     for m in match_files:
         dirmatch = re.search('(\d{4})\/(\w{7})/(ofls\w)', m)
         if dirmatch:
@@ -112,8 +91,7 @@ def test_data_setup( load_rdb=None, outdir=tempfile.mkdtemp(),
     if not os.path.exists(os.path.join(outdir, 'loads')):
         os.mkdir(os.path.join(outdir, 'loads'))
 
-    if load_rdb:
-        copy( load_rdb, os.path.join(outdir, 'loads'))
+    copy( load_rdb, os.path.join(outdir, 'loads'))
 
     return ( outdir, os.path.join(outdir, 'loads'), os.path.join(outdir, 'mp'))
 
