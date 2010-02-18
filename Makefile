@@ -2,7 +2,7 @@ TASK = timelines
 
 include /proj/sot/ska/include/Makefile.FLIGHT
 
-SHARE = parse_cmd_load_gen.pl update_load_seg_db.py make_new_tables.py 
+SHARE = parse_cmd_load_gen.pl update_load_seg_db.py make_new_tables.py fix_timelines.sql
 DATA = task_schedule.cfg
 
 install: 
