@@ -92,7 +92,7 @@ def get_processing( built, dbh=None ):
     return processed
 
 
-def weeks_for_load( run_load, dbh=None, last_timeline=None ):
+def weeks_for_load( run_load, dbh=None, last_timeline=None, test=False ):
     """ 
     Given an entry as returned from the load_segments table, return a list 
     of the timeline intervals
@@ -120,12 +120,15 @@ def weeks_for_load( run_load, dbh=None, last_timeline=None ):
         # if processing covers the end but not the beginning (this one was interruped)
         if run_load['datestart'] < processed['processing_tstart'] and run_load['datestop'] <= processed['processing_tstop']:
             if last_timeline==None:
-                raise ValueError("""Interrupt found, but no "last timeline" to interrupt!""")
+                match['dir'] = None
+                if test==False:
+                    raise ValueError("""Interrupt found, but no "last timeline" to interrupt!""")
+            else:
+                match['dir'] = last_timeline['dir']
             match['datestart'] = processed['processing_tstart']
             match_load_pieces.append( match.copy() )
             match['datestart'] = run_load['datestart']
             match['datestop'] = processed['processing_tstart']
-            match['dir'] = last_timeline['dir']
             match_load_pieces.append( match.copy() )
     else:
         # if the run load matches the times of the built load
@@ -140,7 +143,7 @@ def weeks_for_load( run_load, dbh=None, last_timeline=None ):
 
 
 
-def update_timelines_db( loads=None, dbh=None, dryrun=False ):
+def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     """
     Given a list of load segments this routine determines the timelines (mission
     planning weeks and loads etc) over the loads and inserts new timelines 
@@ -194,7 +197,8 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False ):
                 break
         run_timelines = weeks_for_load( run_load,
                                         dbh=dbh,
-                                        last_timeline=last_timeline )
+                                        last_timeline=last_timeline,
+                                        test=test)
         if len(run_timelines) == 0:
             raise ValueError("No timelines found for load %s" % run_load )
         for run_timeline in run_timelines:
@@ -530,7 +534,7 @@ def main():
                                           ifot_loads[-1]['datestop'],
                                         )
                                     )    
-        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=opt.dryrun )
+        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=opt.dryrun, test=opt.test )
 
     log.removeHandler(ch)
 

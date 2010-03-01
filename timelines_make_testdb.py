@@ -19,10 +19,10 @@ def get_options():
     from optparse import OptionParser
     parser = OptionParser(usage="usage: %prog [options] [cmd_set_arg1 ...]")
     parser.set_defaults()
-    parser.add_option("--tstart",
-                      help="tstart for mp yanks")
-    parser.add_option("--tstop",
-                      help="tstop for mp yanks")
+#    parser.add_option("--tstart",
+#                      help="tstart for mp yanks")
+#    parser.add_option("--tstop",
+#                      help="tstop for mp yanks")
     parser.add_option("--outdir",
                       default=".",
                       help="Destination directory for links")
@@ -39,10 +39,12 @@ def main():
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
-    (outdir, load_dir, mp_dir) = timelines_test.test_data_setup( opt )
+    (outdir, load_dir, mp_dir) = timelines_test.test_data_setup( opt.load_rdb, 
+                                                                 outdir=outdir )
     if not os.path.exists(dbfilename):
-        timelines_test.make_table( dbfilename, opt)
-    timelines_test.make_states( outdir, load_dir, mp_dir, dbfilename, opt)
+        timelines_test.make_table( dbfilename )
+
+    timelines_test.make_states( outdir, load_dir, mp_dir, dbfilename, opt.verbose)
 
 if __name__ == '__main__':
     main()

@@ -4,6 +4,8 @@ import sys
 import time
 import re
 import tempfile
+import difflib
+import shutil
 import mx.DateTime
 import numpy as np
 from itertools import count, izip
@@ -12,8 +14,88 @@ import Ska.DBI
 import Ska.Table
 from Chandra.Time import DateTime
 
-
+err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
+
+
+def make_states( load_rdb ):
+    """
+    Setup db and states in a temp directory for quick nose testing
+
+    :param load_rdb: file with load segments
+    :rtype: (outdir, dbfilename)
+    """
+
+    (outdir, load_dir, mp_dir) = data_setup( load_rdb, outdir=tempfile.mkdtemp() )
+    dbfilename = os.path.join( outdir, 'test.db3')
+    make_table( dbfilename )
+    populate_states( outdir, load_dir, mp_dir, dbfilename )
+    err.write("Made Test States in %s\n" % outdir )
+    return (outdir, dbfilename)
+
+def clean_states( outdir ):
+    """
+    completely delete testing directory
+
+    :param outdir: testing directory
+    """
+
+    shutil.rmtree( outdir )
+    err.write("Deleted Temp Directory %s\n" % outdir )
+
+
+### actual tests.
+def test_loads():
+    """
+    Build testing states and test against fiducial data
+
+    Return testing generators for each list of loads to be checked
+    """
+
+    fiducial = { 
+        't/july_fixed.rdb' : 't/july_fixed.dat',
+        't/2009:248:12:39:44.351.rdb' : 't/2009:248:12:39:44.351.dat',
+        't/2009:274:22:25:44.351.rdb' : 't/2009:274:22:25:44.351.dat',
+        }
+
+    for load_rdb, state_file in fiducial.iteritems():
+        err.write("Checking %s\n" % load_rdb )
+#        check_loads( load_rdb, state_file )
+        yield check_loads, load_rdb, state_file
+
+def check_loads( load_rdb, state_file):
+    """
+    Setup testing db for a list of load segments
+    Write out the "states" created.
+    Diff against fiducial list of states
+
+    :param load_rdb: load segment rdb file
+    :param state_file: file with fiducial states
+    """
+
+    # make new states from load segments
+    (outdir, dbfilename) = make_states(load_rdb )
+    test_states = text_states( load_rdb, dbfilename)
+    ts = open( os.path.join(outdir, 'test_states.dat'), 'w')
+    ts.writelines(test_states)
+    ts.close()
+    # retrieve fiducial states
+    if os.path.exists(state_file):
+        fl = open(state_file, 'r')
+        fiducial_states = fl.readlines()
+    else:
+        fiducial_states = ''
+    # compare
+    differ = difflib.context_diff( fiducial_states, test_states )
+    difflines = [ line for line in differ ]
+    if len(difflines):
+        df = open(os.path.join(outdir, 'diffs.txt'), 'w')
+        df.writelines(difflines)
+        df.close()
+        err.write("Unexpected Diff in %s\n" % outdir )
+    assert len(difflines) == 0 
+    err.write("Checked Loads from %s\n" % load_rdb )
+    clean_states(outdir)    
 
 
 def load_to_dir( week ):
@@ -29,7 +111,7 @@ def load_to_dir( week ):
     return dir
 
 
-def test_data_setup( load_rdb, outdir=tempfile.mkdtemp(), 
+def data_setup( load_rdb, outdir=tempfile.mkdtemp(), 
                      verbose=False ):    
     """
     Read a load segment rdb file
@@ -121,7 +203,7 @@ def make_table( dbfilename, tstart=None, tstop=None):
     
 
 
-def make_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
+def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
     """
     From the available directories and load segment file
     Populate a load segments table and a timelines table
