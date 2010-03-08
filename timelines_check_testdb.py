@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 import os
 import timelines_test
-
+# Matplotlib setup
+# Use Agg backend for command-line (non-interactive) operation
+import matplotlib
+if __name__ == '__main__':
+    matplotlib.use('Agg')
+        
 
 def get_options():
     from optparse import OptionParser
@@ -32,12 +37,10 @@ def get_options():
 
 def main():
     opt, args = get_options()
-#opt = options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
     model = timelines_test.run_model( opt, dbfilename )
-#    timelines_test.cmp_states( opt, dbfilename )
-#print dbfilename
+    timelines_test.cmp_states( opt, dbfilename )
 
 
 if __name__ == '__main__':
