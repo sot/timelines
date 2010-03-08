@@ -1,9 +1,10 @@
-#!/usr/bin/env python
 import os
 import sys
 import time
 import re
 import tempfile
+import difflib
+import shutil
 import mx.DateTime
 import numpy as np
 from itertools import count, izip
@@ -11,10 +12,133 @@ from Ska.Shell import bash_shell, bash
 import Ska.DBI
 import Ska.Table
 from Chandra.Time import DateTime
+import timelines
 
-
+err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
 
+
+
+
+### actual tests.
+def test_loads():
+    """
+    Build testing states and test against fiducial data
+
+    Return testing generators for each list of loads to be checked
+    """
+
+    
+    good_a = [
+        't/2009:164:04:11:15.022.rdb',
+        't/2009:193:20:30:02.056.rdb',
+        't/2009:214:22:44:19.592.rdb',
+        't/july_fixed.rdb',
+        't/2009:248:12:39:44.351.rdb',
+        't/2009:274:22:25:44.351.rdb',]
+    
+    good_b =  [
+        't/2009:164:04:11:15.022.dat',
+        't/2009:193:20:30:02.056.dat',
+        't/2009:214:22:44:19.592.dat',
+        't/july_fixed.dat',
+        't/2009:248:12:39:44.351.dat',
+        't/2009:274:22:25:44.351.dat' ]
+    
+    for load_rdb, state_file in izip( good_a, good_b):
+        err.write("Checking %s\n" % load_rdb )
+#        check_loads( load_rdb, state_file )
+        yield check_loads, load_rdb, state_file, True
+
+    bad_a = [ 't/july_fixed.rdb',]
+    bad_b = [ 't/july_broken.dat', ]
+
+    for load_rdb, state_file in izip( bad_a, bad_b ):
+        err.write("Checking %s\n" % load_rdb )
+#        check_loads( load_rdb, state_file )
+        yield check_loads, load_rdb, state_file, False
+
+
+
+def make_states( load_rdb ):
+    """
+    Setup db and states in a temp directory for quick nose testing
+
+    :param load_rdb: file with load segments
+    :rtype: (outdir, dbfilename)
+    """
+
+    (outdir, load_dir, mp_dir) = data_setup( load_rdb, outdir=tempfile.mkdtemp() )
+    dbfilename = os.path.join( outdir, 'test.db3')
+    make_table( dbfilename )
+    populate_states( outdir, load_dir, mp_dir, dbfilename )
+    err.write("Made Test States in %s\n" % outdir )
+    return (outdir, dbfilename)
+
+
+def clean_states( outdir ):
+    """
+    completely delete testing directory
+
+    :param outdir: testing directory
+    """
+
+    shutil.rmtree( outdir )
+    err.write("Deleted Temp Directory %s\n" % outdir )
+
+
+def check_loads( load_rdb, state_file, expect_match=True):
+    """
+    Setup testing db for a list of load segments
+    Write out the "states" created.
+    Diff against fiducial list of states
+
+    :param load_rdb: load segment rdb file
+    :param state_file: file with fiducial states
+    """
+
+    # make new states from load segments
+    (outdir, dbfilename) = make_states(load_rdb )
+    test_states = text_states( load_rdb, dbfilename)
+    ts = open( os.path.join(outdir, 'test_states.dat'), 'w')
+    ts.writelines(test_states)
+    ts.close()
+    # retrieve fiducial states
+    if os.path.exists(state_file):
+        fl = open(state_file, 'r')
+        fiducial_states = fl.readlines()
+    else:
+        fiducial_states = ''
+    # compare
+    differ = difflib.context_diff( fiducial_states, test_states )
+    difflines = [ line for line in differ ]
+    if len(difflines):
+        df = open(os.path.join(outdir, 'diffs.txt'), 'w')
+        df.writelines(difflines)
+        df.close()
+        err.write("Diff in %s\n" % outdir )
+    if expect_match:
+        assert len(difflines) == 0 
+        err.write("Checked Loads from %s\n" % load_rdb )
+        clean_states(outdir)    
+    else:
+        assert len(difflines) != 0 
+        err.write("Expected mismatch in Loads from %s\n" % load_rdb )
+
+
+def test_load_to_dir():
+
+    good_a = ['NOV2408C', 'feb0110c']
+    good_b = [ '/2008/NOV2408/oflsc/', '/2010/FEB0110/oflsc/']
+    
+    for weekabr, week in izip( good_a, good_b ):
+        err.write("Checking load_to_dir \n" )
+#        check_loads( load_rdb, state_file )
+        assert week == load_to_dir(weekabr)
+#        yield check_loads, load_rdb, state_file, False
+
+
+             
 
 def load_to_dir( week ):
     """
@@ -25,11 +149,11 @@ def load_to_dir( week ):
     dir = None
     match = re.match('((\w{3})(\d{2})(\d{2}))(\w{1})', week)
     if match:
-        dir = "/20%s/%s/ofls%s/" % (match.group(4), match.group(1), match.group(5).lower())
+        dir = "/20%s/%s/ofls%s/" % (match.group(4), match.group(1).upper(), match.group(5).lower())
     return dir
 
 
-def test_data_setup( load_rdb, outdir=tempfile.mkdtemp(), 
+def data_setup( load_rdb, outdir=tempfile.mkdtemp(), 
                      verbose=False ):    
     """
     Read a load segment rdb file
@@ -96,6 +220,7 @@ def test_data_setup( load_rdb, outdir=tempfile.mkdtemp(),
     return ( outdir, os.path.join(outdir, 'loads'), os.path.join(outdir, 'mp'))
 
 
+
 def make_table( dbfilename, tstart=None, tstop=None):
     """ 
     Initialize tables
@@ -121,7 +246,7 @@ def make_table( dbfilename, tstart=None, tstop=None):
     
 
 
-def make_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
+def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
     """
     From the available directories and load segment file
     Populate a load segments table and a timelines table
@@ -189,9 +314,14 @@ def make_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
 
 
 def string_states( states):
-    """Write states recarray to file states.dat"""
+    """
+    Write states recarray out to a string
+
+    :param states: recarray of states
+    :rtype: string
+
+    """
     
-#    out = open(outfile, 'w')
     fmt = {'power': '%.1f',
            'pitch': '%.2f',
            'tstart': '%.2f',
@@ -210,10 +340,15 @@ def string_states( states):
     import Ska.Numpy
     statestring = Ska.Numpy.pformat(newstates, fmt)
     return statestring.splitlines(True)
-#    Ska.Numpy.pprint(newstates, fmt, out)
-#    out.close()
     
 def text_states( load_rdb, dbfile ):
+    """
+    Fetch states and return as a string
+
+    :param load_rdb: rdb file with load segments
+    :param dbfile: database with states
+    :rtype: string
+    """
 
     loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
     datestart = loads[0]['TStart (GMT)']
@@ -226,14 +361,18 @@ def text_states( load_rdb, dbfile ):
                             order by datestart""" % (datestart, datestop ))
     test_lines = string_states( test_states )
     return test_lines
-#    ts = open(outfile, 'w')
-#    ts.writelines(test_lines)
-#    ts.close()
-
 
 
 def cmp_states(opt, dbfile ):
+    """
+    Compare sqlite testing database in dbfile with sybase
+    Writes out diff
 
+    :param opt: cmd line passthrough that includes opt.outdir and opt.load_rdb
+    :param dbfile: sqlite3 filename
+    :rtype: None, diff written to opt.outdir/diff.html
+
+    """
 
     loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
     datestart = loads[0]['TStart (GMT)']
@@ -249,7 +388,7 @@ def cmp_states(opt, dbfile ):
     ts.writelines(test_lines)
     ts.close()
 
-    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=True)    
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=opt.verbose)    
     acadb_states = acadb.fetchall("""select * from cmd_states
                             where datestart >= '%s'
                             and datestart <= '%s'
@@ -267,73 +406,15 @@ def cmp_states(opt, dbfile ):
     diff_out.writelines(diff)
     
 
-                  
-
-#    pass
-#    if len(db_states) > 0:
-#         # Get states columns that are not float type. descr gives list of (colname, type_descr)
-#        match_cols = [x[0] for x in states.dtype.descr if 'f' not in x[1]]
-#
-#        # Find mismatches: direct compare or where pitch or attitude differs by > 1 arcsec
-#        for i_diff, db_state, state in izip(count(), db_states, states):
-#            for x in match_cols:
-#                if db_state[x] != state[x]:
-#                    print x
-#                    print db_state[x]
-#                    print state[x]
-#                    break
-#    else:
-#        return
-#          # made it with no mismatches so no action required
-#
-#    else:
-#        i_diff = 0
-#
-#    print "mismatch at %d" % i_diff
-
-#    # Mismatch occured at i_diff.  Drop cmd_states after states[i_diff].datestart
-#    cmd = "DELETE FROM cmd_states WHERE datestart >= '%s'" % states[i_diff].datestart
-#    logging.info('udpate_states_db: ' + cmd)
-#    db.execute(cmd)
-#
-#    # Insert new states[i_diff:] into cmd_states 
-#    logging.info('udpate_states_db: inserting states[%d:%d] to cmd_states' %
-#                  (i_diff, len(states)+1))
-#    for state in states[i_diff:]:
-#        db.insert(dict((x, state[x]) for x in state.dtype.names), 'cmd_states', commit=True)
-#    db.commit()
-
-#def cmp_cmds( db ):
-#
-#    test_cmds = db.fetchall('select * from cmds order by date')
-#    real_cmds = acadb.fetchall("""select * from cmds
-#                                 where date >= '%s'
-#                                 and date <= '%s'
-#                                 order by date""" % ( test_cmds[0]['date'],
-#                                                         test_cmds[-1]['date'] ))
-#    
-#    # Get states columns that are not float type. descr gives list of (colname, type_descr)
-##    match_cols = [x[0] for x in test_cmds.dtype.descr if 'f' not in x[1]]
-#    match_cols = [ 'timeline_id', 'date', 'cmd', 'tlmsid', 'msid', 'vcdu', 'step', 'scs']
-#    
-#     # Find mismatches: direct compare or where pitch or attitude differs by > 1 arcsec
-#    for i_diff, real_cmd, cmd in izip(count(), real_cmds, test_cmds):
-#        for x in match_cols:
-#            if real_cmd[x] != cmd[x]:
-#                print x
-#                print real_cmd[x]
-#                print cmd[x]
-#                break
-#    else:
-#        # made it with no mismatches so no action required
-#        return
-#
-#    print "mismatch at %d" % i_diff
-
-
 
 def run_model(opt, dbfile):
+    """
+    Run the psmc twodof model for given states from a sqlite dbfile
 
+    :param opt: cmd line options opt.load_rdb, opt.verbose, opt.outdir
+    :param dbfile: sqlite3 filename
+    :rtype: dict of just about everything
+    """
 
     import Ska.Table
 
@@ -391,37 +472,122 @@ def run_model(opt, dbfile):
 
 
 
+def test_get_built_load():
 
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+ 
+    good_a = [{'datestart': '2010:052:01:59:26.450',
+              'datestop': '2010:052:12:20:06.101',
+              'fixed_by_hand': 0,
+              'id': 383104832,
+              'load_scs': 128,
+              'load_segment': 'CL052:0101',
+              'year': 2010},]
+    good_b = [{'file': 'C044_2301.sum',
+              'first_cmd_time': '2010:052:01:59:26.450',
+              'last_cmd_time': '2010:052:12:20:06.101',
+              'load_scs': 128,
+              'load_segment': 'CL052:0101',
+              'sumfile_modtime': 1266030114.0,
+              'year': 2010},]
+             
 
-#t0 = '1999:001:00:00:00.000'
+    for load, built_load in izip( good_a, good_b):
+        err.write("Checking get_built_loads\n")
+#        check_loads( load_rdb, state_file )
+        assert built_load == timelines.get_built_load( load, dbh)
+#        yield check_loads, load_rdb, state_file, False
 #
-#
-#def tester( dbfilename, dirs, load_rdb_text, datestart, testdir=None):
-#    if testdir==None:
-#        testdir = tempfile.mkdtemp()
-#    dbfilename = os.path.join( testdir, dbfilename )
-#    mpdir = os.path.join(testdir, 'mp')
-#    if not os.path.exists(mpdir):
-#        os.mkdir(mpdir)
-#    for dir in dirs:
-#        dirmatch = re.match('(\d{4})\/(\w{7})', dir)
-#        if dirmatch:
-#            year = dirmatch.group(1)
-#            week = dirmatch.group(2)
-#            if not os.path.exists(os.path.join(mpdir, year)):
-#                os.mkdir( os.path.join( mpdir, year))
-#            oldname = os.path.join('/data/mpcrit1/mplogs/', year, week)
-#            newname = os.path.join( mpdir, year, week )
-#            if not os.path.exists(newname):
-#                os.symlink(oldname, newname)
-#    if not os.path.exists(os.path.join(testdir, 'load_rdb')):
-#        os.mkdir(os.path.join(testdir, 'load_rdb'))
-#    f=open(os.path.join(testdir, 'load_rdb', 'test.rdb'), 'w')
-#    f.write(load_rdb_text)
-#    f.close()
-#    
+def test_get_processing():
 
-         
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+ 
+    good_a = [{'file': 'C044_2301.sum',
+              'first_cmd_time': '2010:052:01:59:26.450',
+              'last_cmd_time': '2010:052:12:20:06.101',
+              'load_scs': 128,
+              'load_segment': 'CL052:0101',
+              'sumfile_modtime': 1266030114.0,
+              'year': 2010},]
+    good_b = [{'bcf_cmd_count': None,
+              'continuity_cmds': None,
+              'dir': '/2010/FEB1310/oflsb/',
+              'execution_tstart': '2010:044:03:01:27.000',
+              'file': 'C044_2301.sum',
+              'planning_tstart': '2010:044:23:00:00.000',
+              'planning_tstop': '2010:052:12:23:00.000',
+              'processing_tstart': '2010:044:23:00:00.000',
+              'processing_tstop': '2010:052:12:23:00.000',
+              'replan': 0,
+              'replan_cmds': None,
+              'sumfile_modtime': 1266030114.0,
+              'year': 2010},
+             ]
+
+    for built_load, proc in izip( good_a, good_b):
+        err.write("Checking get_processing \n")
+#        check_loads( load_rdb, state_file )
+        assert proc == timelines.get_processing( built_load, dbh)
+#        yield check_loads, load_rdb, state_file, False             
+
+
+
+def test_weeks_for_load():
+
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+
+    good_a = [ {'datestart': '2010:052:01:59:26.450',
+                'datestop': '2010:052:12:20:06.101',
+                'fixed_by_hand': 0,
+                'id': 383104832,
+                'load_scs': 128,
+                'load_segment': 'CL052:0101',
+                'year': 2010}, ]
+    good_b = [ [{'datestart': '2010:052:01:59:26.450',
+                 'datestop': '2010:052:12:20:06.101',
+                 'dir': '/2010/FEB1310/oflsb/',
+                 'incomplete': 0,
+                 'load_segment_id': 383104832,
+                 'replan': 0}], ]
+
+    for load, new_timelines in izip( good_a, good_b ):
+
+        err.write("Checking weeks_for_load \n" )
+#        check_loads( load_rdb, state_file )
+        assert new_timelines == timelines.weeks_for_load( load, dbh)
+#        yield check_loads, load_rdb, state_file, False             
+
+
+#def rdb_to_db_schema( orig_ifot_loads ):
+#    """
+#    Convert the load segment data from a get_iFOT_events.pl rdb table into
+#    the schema used by the load segments table
+#
+#    :param orig_rdb_loads: recarray from the get_iFOT_events.pl rdb table
+#    :rtype: recarray 
+#    """
+#    loads = []
+#    for orig_load in orig_ifot_loads:
+#        starttime = DateTime(orig_load['TStart (GMT)'])
+#        load = ( int(starttime.secs),
+#                 orig_load['LOADSEG.NAME'],
+#                 starttime.mxDateTime.year,
+#                 orig_load['TStart (GMT)'],
+#                 orig_load['TStop (GMT)'],
+#                 orig_load['LOADSEG.SCS'],
+#                 0,
+#                 )
+#        loads.append(load)
+#    names = ('id','load_segment','year','datestart','datestop','load_scs','fixed_by_hand')
+#    load_recs = np.rec.fromrecords( loads, names=names)
+#    return load_recs
+#
+    
+
+
+
+
+
 
 
 
