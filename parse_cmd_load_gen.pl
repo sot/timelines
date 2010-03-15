@@ -81,6 +81,9 @@ else{
 
 my @files;
 
+my $max_touch_file;
+my $max_touch_time = 0;
+
 # find command load processing summaries newer than the touch file
 use POSIX qw( strftime );
 my $curr_year = strftime "%Y", gmtime(time());
@@ -88,30 +91,48 @@ my $week_glob = '[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9]';
 my $sum_glob = 'C[0-9][0-9][0-9]?[0-9][0-9][0-9][0-9].sum';
 YEAR:
 for ( my $year = 1999; $year <= $curr_year; $year++){
-    my $cmd = "find -L ${mp_dir}/${year}/${week_glob}/ "
-	. "-wholename \"*/ofls?/mps/${sum_glob}\" ";
+    my $cmd = "find -L ${mp_dir}/${year}/${week_glob}/ofls?/mps/ "
+	. " -wholename \"*/ofls?/mps/${sum_glob}\" ";
     if (defined $touch_stat){
 	$cmd .= " -newer $opt{touch_file}";
-	my $touch_year = strftime "%Y", gmtime($touch_stat->mtime());
-	next YEAR if $year < $touch_year;
+#	my $touch_year = strftime "%Y", gmtime($touch_stat->mtime());
+#       next YEAR if $year < $touch_year;
+
     }
-    print "$cmd \n";
+    print "$cmd \n" if $opt{verbose};
     my ($status, @run_files) = run("$cmd");
-    unless ($status){
-	@files = (@files, @run_files);
+    next YEAR if $status;
+    map {chomp $_} @run_files;
+    for my $file (@run_files){
+	my $mtime = update_for_file( $file );
+	if ($max_touch_time < $mtime){
+	    $max_touch_time = $mtime;
+	    $max_touch_file = $file;
+	}    
     }
 }
 
-map {chomp $_} @files;
 
-# for each command load generation summary
-SUM_FILE:
-for my $file (@files){
+# if the touch_stat is earlier than the file time or not defined, update the "touch file"
+if ( (defined $max_touch_file) and ($max_touch_time > 0)){
+    if ( ((defined $touch_stat) and ($touch_stat->mtime < $max_touch_time) )
+	 or ( not defined $touch_stat )) {
+	my ($t_status) = run("touch -r $max_touch_file $opt{touch_file}");
+	die("Error touching $opt{touch_file}") if $t_status;
+    }
+}
+
+
+
+
+
+sub update_for_file{
+    my $file = shift;
 
     print "Parsing $file" if $opt{verbose};
-    
+	
     my $file_stat = stat("$file");
-
+	
     my ( $week, $loads ) = parse_clgps( $file );
     my ( $dir, $filename);
     if ($file =~ /${mp_dir}(\/\d{4}\/\w{3}\d{4}\/ofls\w?\/)mps\/(C.*\.sum)/){
@@ -119,11 +140,10 @@ for my $file (@files){
 	$filename =$2;
     }
 
-
     # exclude what appear to be weird testing directories
     if ($dir =~ /.*ofls(t|x)/) {
 	print "Skipping \n" if $opt{verbose};
-	next SUM_FILE;
+	return undef;
     }
 
     if (defined $dir and defined $filename){
@@ -167,19 +187,14 @@ for my $file (@files){
 	}
     }
     
-
-
-    # if the touch_stat is earlier than the file time or not defined, update the "touch file"
-    if (  ( (defined $touch_stat) and ($touch_stat->mtime < $file_stat->mtime) )
-	  or ( not defined $touch_stat ) ) {
-	my ($t_status) = run("touch -r $file $opt{touch_file}");
-	die("Error touching $opt{touch_file}") if $t_status;
-	$touch_stat = stat($opt{touch_file});
-    }
-
     print " ... Done \n" if $opt{verbose};
+    return $file_stat->mtime;
 
 }
+
+
+
+
 
 
 
