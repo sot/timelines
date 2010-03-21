@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import glob
 import re
 import mx.DateTime
@@ -15,13 +16,7 @@ from Chandra.Time import DateTime
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-# emails...
-smtp_handler = logging.handlers.SMTPHandler('localhost', 
-                                           'jeanconn@head.cfa.harvard.edu',
-                                           'jeanconn@head.cfa.harvard.edu',
-                                           'load segment update')
-smtp_handler.setLevel(logging.WARN)
-log.addHandler(smtp_handler)
+MP_DIR = '/data/mpcrit1/mplogs/'
 
 
 def get_options():
@@ -96,8 +91,24 @@ def get_processing( built, dbh=None ):
         raise ValueError("Unable to find processing for built file %s", built['file'])
     return processed
 
+def get_replan_dir( replan_seg, replan_year, dbh=None):
+    match_like = re.search('C(\d{3}).?(\d{4})', replan_seg)
+    if match_like is None:
+        raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
+                         replan_seg)
+    replan_query = ("""select dir from tl_processing
+                       where file like 'C%s%s%s.sum'
+                       and year = %d 
+                       order by year, sumfile_modtime desc
+                       """ % (match_like.group(1), '%', match_like.group(2), replan_year ))
+    replan = dbh.fetchone( replan_query )
+    # if a built version *still* hasn't been found
+    if replan  is None:
+        raise ValueError("Unable to find file for %s,%s" % (replan_year, replan_seg))
+    return replan['dir']
 
-def weeks_for_load( run_load, dbh=None, last_timeline=None, test=False ):
+
+def weeks_for_load( run_load, dbh=None, test=False ):
     """ 
     Determine the timeline intervals that exist for a load segment
 
@@ -130,16 +141,15 @@ def weeks_for_load( run_load, dbh=None, last_timeline=None, test=False ):
             match_load_pieces.append( match.copy() )
         # if processing covers the end but not the beginning (this one was interruped)
         if run_load['datestart'] < processed['processing_tstart'] and run_load['datestop'] <= processed['processing_tstop']:
-            if last_timeline==None:
-                match['dir'] = None
-                if test==False:
-                    raise ValueError("""Interrupt found, but no "last timeline" to interrupt!""")
-            else:
-                match['dir'] = last_timeline['dir']
+            replan_dir = get_replan_dir( processed['replan_cmds'], run_load['year'], dbh=dbh )
+            print replan_dir
+            # the end
             match['datestart'] = processed['processing_tstart']
             match_load_pieces.append( match.copy() )
+            # the pre-this-processed-file chunk
             match['datestart'] = run_load['datestart']
             match['datestop'] = processed['processing_tstart']
+            match['dir'] = replan_dir
             match_load_pieces.append( match.copy() )
     else:
         # if the run load matches the times of the built load
@@ -151,6 +161,25 @@ def weeks_for_load( run_load, dbh=None, last_timeline=None, test=False ):
 
     timelines = sorted(match_load_pieces, key=lambda k: k['datestart'])
     return timelines
+
+def get_ref_timelines( datestart, dbh=None, n=10):
+    ref_timelines = []
+    pre_query =  ("select * from timelines where datestart <= '%s' order by datestart desc"
+                  %  datestart )
+    pre_query_fetch = dbh.fetch(pre_query)
+    for cnt in xrange(0,n):
+        try:
+            ref_timelines.append( pre_query_fetch.next() )
+        except StopIteration:
+            if (cnt == 0):
+                log.warn("""TIMELINES WARN: no timelines found before current insert""")
+            else:
+                log.warn("""TIMELINES WARN: only found %i of %i timelines before current insert"""
+                         % (cnt-1, 10))
+            break
+    ref_timelines = sorted(ref_timelines, key=lambda k: k['datestart'])
+    return ref_timelines
+
 
 def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     """
@@ -178,47 +207,20 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     log.info("TIMELINES INFO: Updating timelines for range %s to %s" 
              % ( as_run[0]['datestart'], as_run[-1]['datestop']))
 
-    # get some existing entries *before* these loads
-    # keep these "reference" timelines separate from the "to update"
-    # list of timelines
-    ref_timelines = []
-    pre_query =  ("select * from timelines where datestart <= '%s' order by datestart desc"
-                  %  as_run[0]['datestart'] )
-    pre_query_fetch = dbh.fetch(pre_query)
-    for cnt in xrange(0,10):
-        try:
-            ref_timelines.append( pre_query_fetch.next() )
-        except StopIteration:
-            if (cnt == 0):
-                log.warn("""TIMELINES WARN: no timelines found before current insert""")
-            else:
-                log.warn("""TIMELINES WARN: only found %i of %i timelines before current insert"""
-                         % (cnt-1, 10))
-            break
-    ref_timelines = sorted(ref_timelines, key=lambda k: k['datestart'])
-    
     timelines = []
     for run_load in as_run:
-        # find the first timeline before the load start in question
-        last_timeline = None
-        for last_timeline in reversed(ref_timelines):
-            if last_timeline['datestart'] <= run_load['datestart']:
-                break
         run_timelines = weeks_for_load( run_load,
                                         dbh=dbh,
-                                        last_timeline=last_timeline,
                                         test=test)
         if len(run_timelines) == 0:
             raise ValueError("No timelines found for load %s" % run_load )
         for run_timeline in run_timelines:
             # append the new timeline to the list to insert
             timelines.append(run_timeline)
-            # also append to the reference list
-            ref_timelines.append(run_timeline)
 
     timelines = sorted(timelines, key=lambda k: k['datestart'])
     for timeline in timelines:
-        timeline['id'] = int(DateTime( timeline['datestart']).secs)
+        timeline['id'] = int(DateTime(timeline['datestart']).secs)
         timeline['fixed_by_hand'] = 0
 
     # get existing entries
@@ -453,10 +455,10 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
         else:
             raise ValueError("No overlap in database for load segment interval")
     else:
-        if any(db_loads['fixed_by_hand']):
-            for load in db_loads[ db_loads['fixed_by_hand'] == 1]:
-                log.warn("LOAD_SEG WARN: Updating load_segments across %s which is fixed_by_hand" 
-                         % (load['load_segment']))
+#        if any(db_loads['fixed_by_hand']):
+#            for load in db_loads[ db_loads['fixed_by_hand'] == 1]:
+#                log.warn("LOAD_SEG WARN: Updating load_segments across %s which is fixed_by_hand" 
+#                         % (load['load_segment']))
 
         # Find mismatches:
         match_cols = [x[0] for x in db_loads.dtype.descr if 'f' not in x[1]]
@@ -483,7 +485,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
                 log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
             return
 
-        cmd = ("DELETE FROM load_segments WHERE datestart >= '%s' and fixed_by_hand = 0" 
+        cmd = ("DELETE FROM load_segments WHERE datestart >= '%s'"
                % db_loads[i_diff]['datestart'] )
         log.info('LOAD_SEG INFO: ' + cmd)
         if not dryrun:
@@ -544,7 +546,8 @@ def main():
     ifot_loads = rdb_to_db_schema( orig_rdb_loads )
     if len(ifot_loads):
         update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
-        
+        import fix_load_segments
+        fix_load_segments.repair(dbh)
         db_loads = dbh.fetchall("""select * from load_segments 
                                    where datestart >= '%s' and datestart <= '%s'
                                    order by datestart   
