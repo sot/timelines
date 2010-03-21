@@ -56,6 +56,9 @@ def get_built_load( run_load, dbh=None):
     """
     Given an entry from the load_segments table, return the matching entry 
     from the tl_built_loads table
+    :param load: run load from load_segments table
+    :rtype: dict of matching built load 
+
     """
 
     built_query = ( """select * from tl_built_loads where load_segment = '%s' 
@@ -82,6 +85,8 @@ def get_processing( built, dbh=None ):
     """
     Given an entry from the tl_built_loads table, return the entry for the 
     corresponding file from tl_processing
+    :param built: tl_built_loads entry/dict
+    :rtype: dict of matching tl_processing entry
     """
     processing_query = ("""select * from tl_processing where file = '%s' 
                            and sumfile_modtime = %s order by dir desc """
@@ -94,8 +99,15 @@ def get_processing( built, dbh=None ):
 
 def weeks_for_load( run_load, dbh=None, last_timeline=None, test=False ):
     """ 
-    Given an entry as returned from the load_segments table, return a list 
-    of the timeline intervals
+    Determine the timeline intervals that exist for a load segment
+
+    :param run_load: load segment dict
+    :param dbh: database handle for tl_built_loads and tl_processing
+    :param test: test mode option to allow the routine to continue on missing history
+
+    :rtype: list of dicts.  Each dict a 'timeline'
+
+
     """
     built = get_built_load( run_load, dbh=dbh )
     processed = get_processing( built, dbh=dbh )
@@ -334,6 +346,15 @@ def check_load_overlap( loads ):
 
 
 def clear_timeline( id, dbh=None, dryrun=False ):
+    """
+    Clear the commands related to a timeline and then delete the timeline.
+
+    :param id: unique id of timeline
+    :param dbh: database handle for cmd_fltpars, cmd_intpars, cmds, and timlines tables
+    :param dryrun: dryrun option/ no cmds are executed
+    :rtype: None
+    """
+
     # remove related cmds as if there were a foreign key constraint
     for table in ('cmd_fltpars', 'cmd_intpars', 'cmds'):
         cmd = (""" DELETE from %s
