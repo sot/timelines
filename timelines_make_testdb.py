@@ -19,10 +19,6 @@ def get_options():
     from optparse import OptionParser
     parser = OptionParser(usage="usage: %prog [options] [cmd_set_arg1 ...]")
     parser.set_defaults()
-#    parser.add_option("--tstart",
-#                      help="tstart for mp yanks")
-#    parser.add_option("--tstop",
-#                      help="tstop for mp yanks")
     parser.add_option("--outdir",
                       default=".",
                       help="Destination directory for links")
@@ -36,6 +32,13 @@ def get_options():
     return opt, args
 
 def main():
+    """
+    Runs timelines_test.data_setup for a standard configuration where the
+    operations shall create a test.db3 file in the specified outdir for the
+    supplied load segments in the --load_rdb file
+    
+    Runs timelines_test.populate_states for the created test data setup
+    """
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
