@@ -92,6 +92,14 @@ def get_processing( built, dbh=None ):
     return processed
 
 def get_replan_dir( replan_seg, replan_year, dbh=None):
+    """
+    Given the 'replan_cmds' entry from a processing summary (and the year) find
+    the source file that most closely matches it.
+
+    :param replan_seg: replan commands source string (like C123:1029 or C014_0293)
+    :param replan_year: year, integer
+    :rtype: directory name string
+    """
     match_like = re.search('C(\d{3}).?(\d{4})', replan_seg)
     if match_like is None:
         raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
@@ -102,7 +110,7 @@ def get_replan_dir( replan_seg, replan_year, dbh=None):
                        order by year, sumfile_modtime desc
                        """ % (match_like.group(1), '%', match_like.group(2), replan_year ))
     replan = dbh.fetchone( replan_query )
-    # if a built version *still* hasn't been found
+    # if a replan directory *still* hasn't been found
     if replan  is None:
         raise ValueError("Unable to find file for %s,%s" % (replan_year, replan_seg))
     return replan['dir']
@@ -112,11 +120,45 @@ def weeks_for_load( run_load, dbh=None, test=False ):
     """ 
     Determine the timeline intervals that exist for a load segment
 
+    How does this work?
+    weeks_for_load queries the two tables created by
+    parse_cmd_load_get.pl, tl_built_loads and tl_processing, by
+    calling get_built_loads() and get_processing().  The
+    tl_built_loads table stores some details for every command load
+    from every week and every version of every week that has a
+    processing summary in /data/mpcrit1/mplogs/.
+
+    The tl_processing table contains the information from the processing summary:
+       was the week a replan?
+       what time range was used when the schedule was created?
+       when was the processing summary created?
+
+    weeks_for_load finds the built load that matches the run load and
+    finds the processing summary that corresponds to the built load.
+    This processing summary entry includes the source directory.
+    In the standard case, this single entry covers the whole duration of the
+    load segment that was passed as an argument, and a single ``timeline``
+    entry mapping that time range to a directory is created.
+
+    Gotchas:
+    
+    If the processing summary indicates that the load was part of a
+    Replan/ReOpen (when some commands actually came from a different
+    file) then that directory is determined by searching for the
+    processing entry that matches the name of the replan_cmds entry in
+    the processing summary.  If the load time range goes outside of
+    the processed time range, the replan_cmds source directory will be
+    used to create a ``timeline`` to cover that time interval.  If
+    this source directory/file name needs to be manually overridden, see
+    fix_tl_processing.py for a method to insert entries into the
+    tl_processing table before calling this routine.
+
     :param run_load: load segment dict
     :param dbh: database handle for tl_built_loads and tl_processing
     :param test: test mode option to allow the routine to continue on missing history
 
     :rtype: list of dicts.  Each dict a 'timeline'
+
 
 
     """
@@ -140,9 +182,11 @@ def weeks_for_load( run_load, dbh=None, test=False ):
              & (  run_load['datestop'] <=  processed['processing_tstop'] )):
             match_load_pieces.append( match.copy() )
         # if processing covers the end but not the beginning (this one was interruped)
-        if run_load['datestart'] < processed['processing_tstart'] and run_load['datestop'] <= processed['processing_tstop']:
+        if (run_load['datestart'] < processed['processing_tstart']
+            and run_load['datestop'] <= processed['processing_tstop']):
             replan_dir = get_replan_dir( processed['replan_cmds'], run_load['year'], dbh=dbh )
-            print replan_dir
+            log.warn("TIMELINES WARN: %s,%s is replan/reopen, using %s dir for imported cmds" % (
+                run_load['year'], run_load['load_segment'], replan_dir ))
             # the end
             match['datestart'] = processed['processing_tstart']
             match_load_pieces.append( match.copy() )
@@ -455,11 +499,6 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
         else:
             raise ValueError("No overlap in database for load segment interval")
     else:
-#        if any(db_loads['fixed_by_hand']):
-#            for load in db_loads[ db_loads['fixed_by_hand'] == 1]:
-#                log.warn("LOAD_SEG WARN: Updating load_segments across %s which is fixed_by_hand" 
-#                         % (load['load_segment']))
-
         # Find mismatches:
         match_cols = [x[0] for x in db_loads.dtype.descr if 'f' not in x[1]]
         # use min( ... ) to only check through the range that is in both lists
@@ -545,7 +584,12 @@ def main():
     orig_rdb_loads = Ska.Table.read_ascii_table(rdb_file, datastart=3)
     ifot_loads = rdb_to_db_schema( orig_rdb_loads )
     if len(ifot_loads):
+        # make any scripted edits to the tables of parsed files to override directory
+        # mapping
+        import fix_tl_processing
+        fix_tl_processing.repair(dbh)
         update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
+        # make any scripted edits to the load segments table
         import fix_load_segments
         fix_load_segments.repair(dbh)
         db_loads = dbh.fetchall("""select * from load_segments 
