@@ -95,9 +95,8 @@ for ( my $year = 1999; $year <= $curr_year; $year++){
 	. " -wholename \"*/ofls?/mps/${sum_glob}\" ";
     if (defined $touch_stat){
 	$cmd .= " -newer $opt{touch_file}";
-#	my $touch_year = strftime "%Y", gmtime($touch_stat->mtime());
-#       next YEAR if $year < $touch_year;
-
+	my $touch_year = strftime "%Y", gmtime($touch_stat->mtime());
+       next YEAR if $year < $touch_year-1;
     }
     print "$cmd \n" if $opt{verbose};
     my ($status, @run_files) = run("$cmd");
