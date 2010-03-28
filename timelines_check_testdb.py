@@ -25,17 +25,13 @@ def get_options():
     opt, args = parser.parse_args()
     return opt, args
 
-#class options(object):
-#    load_rdb = 'source_rdb/july_fixed.rdb'
-##    load_rdb = 'test/nov21_right/loads/2009:322:13:15:00.000.rdb'
-##    outdir = 'test/nov21_right/'
-#    outdir = 'july_fixed'
-#    oflsdir = None
-#    run_start_time = None
-#    verbose = True
-
 
 def main():
+    """
+    Run timelines_test.run_model over the states from the test.db3 found in --outdir
+    Run timelines_test.cmp_states to compare the states from test.db3 to the sybase tables
+    """
+    
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
