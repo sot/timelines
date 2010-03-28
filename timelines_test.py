@@ -20,8 +20,6 @@ err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
 
 
-
-
 ### actual tests.
 def test_loads():
     """
@@ -29,17 +27,24 @@ def test_loads():
 
     Return testing generators for each list of loads to be checked
     """
-    
+
+    # load segment files 
     good_a = [
+        't/2008:048:08:07:00.000.rdb',
+        't/2010:023:15:15:00.000.rdb',
         't/2009:164:04:11:15.022.rdb',
         't/2009:193:20:30:02.056.rdb',
         't/2009:214:22:44:19.592.rdb',
         't/july_fixed.rdb',
         't/2009:248:12:39:44.351.rdb',
         't/2009:274:22:25:44.351.rdb',
+    
         ]
     
+    # fiducial text file dumps of cmd_states to match above load_segments
     good_b =  [
+        't/2008:048:08:07:00.000.dat',
+        't/2010:023:15:15:00.000.dat',
         't/2009:164:04:11:15.022.dat',
         't/2009:193:20:30:02.056.dat',
         't/2009:214:22:44:19.592.dat',
@@ -54,9 +59,9 @@ def test_loads():
         f.description = "%s does not match %s states" % (load_rdb, state_file)
         yield(f,)
 
-    
-
+    # load segment list
     bad_a = [ 't/july_fixed.rdb',]
+    # *WRONG* fiducial states for above
     bad_b = [ 't/july_broken.dat', ]
 
     for load_rdb, state_file in izip( bad_a, bad_b):
@@ -293,9 +298,8 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
                 ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
     
     update_load_seg = os.path.join('./update_load_seg_db.py')
-    bash( '%s --test --server %s --loadseg_rdb_dir %s --verbose' %
-                ( update_load_seg, dbfilename, load_seg_dir ))
-
+    load_seg_output = bash( '%s --test --server %s --loadseg_rdb_dir %s --verbose' %
+                            ( update_load_seg, dbfilename, load_seg_dir ))
 
     # update_cmd_states backs up to the first NPNT before the given tstart...
     # backing up doesn't work for this, because we don't have timelines to make 
