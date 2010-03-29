@@ -27,8 +27,11 @@ The key elements of the timelines project are:
 
 Helper elements include:
 
-  - ``fix_timelines.py``: script to implement "manual" database fixes (that are
-    not yet included in iFOT)
+  - ``fix_load_segments.py``: script to implement "manual" database
+    fixes for load_segments (that are not yet included in iFOT)
+  - ``fix_tl_processing.py``: script to implement "manual" database
+    fixes for the command load summary file parsing tables
+    (tl_built_loads, tl_processing)
   - ``timelines_test.py``: package containing regression test
     elements.  suitable for nose tests and the following scripts
   - ``timelines_make_testdb.py``: make a testing db for ... testing
