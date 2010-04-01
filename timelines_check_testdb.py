@@ -37,7 +37,7 @@ def main():
     dbfilename = os.path.join(outdir, 'test.db3')
     model = timelines_test.run_model( opt, dbfilename )
     timelines_test.cmp_states( opt, dbfilename )
-
+    timelines_test.cmp_timelines( opt, dbfilename )
 
 if __name__ == '__main__':
     main()
