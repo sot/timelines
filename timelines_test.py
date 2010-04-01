@@ -435,7 +435,68 @@ def cmp_states(opt, dbfile ):
         htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
         diff = htmldiff.make_file( db_lines, test_lines, context=True )
         diff_out.writelines(diff)
+
+
+def string_timelines(timelines):
+    """
+    Write timelines recarray out to a string
+
+    :param timelines: recarray of timelines
+    :rtype: string
+
+    """
+
+    timeline_strings = []
+    for t in timelines:
+        tstring = "%s\t%s\t%s\n" % (t['datestart'], t['datestop'], t['dir'])
+        timeline_strings.append(tstring)
+    return timeline_strings
+        
+
+def cmp_timelines(opt, dbfile ):
+    """
+    Compare sqlite timelines testing database in dbfile with sybase
+    Writes out diff
+
+    :param opt: cmd line passthrough that includes opt.outdir and opt.load_rdb
+    :param dbfile: sqlite3 filename
+    :rtype: None, diff written to opt.outdir/diff_timelines.html
+
+    """
+
+    loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
+    datestart = loads[0]['TStart (GMT)']
+    datestop = loads[-1]['TStop (GMT)']
     
+    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True, verbose=opt.verbose )
+    test_timelines = db.fetchall("""select * from timelines
+                            where datestart >= '%s'
+                            and datestop < '%s'
+                            order by datestart""" % (datestart, datestop ))
+    test_lines = string_timelines( test_timelines )
+    ts = open(os.path.join(opt.outdir, 'test_timelines.dat'), 'w')
+    ts.writelines(test_lines)
+    ts.close()
+
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=opt.verbose)    
+    acadb_timelines = acadb.fetchall("""select * from timelines
+                            where datestart >= '%s'
+                            and datestop < '%s'
+                            order by datestart""" % (datestart, datestop ))
+    db_lines = string_timelines( acadb_timelines)
+    ds = open(os.path.join(opt.outdir, 'acadb_timelines.dat'), 'w')
+    ds.writelines(db_lines)
+    ds.close()
+
+
+    differ = difflib.context_diff( db_lines, test_lines )
+    difflines = [ line for line in differ ]
+    if len(difflines):
+        diff_out = open(os.path.join(opt.outdir, 'diff_timelines.html'), 'w')
+        htmldiff = difflib.HtmlDiff()
+        htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
+        diff = htmldiff.make_file( db_lines, test_lines, context=True )
+        diff_out.writelines(diff)
 
 
 def run_model(opt, dbfile):
