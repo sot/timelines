@@ -588,10 +588,10 @@ def main():
         # mapping
         import fix_tl_processing
         fix_tl_processing.repair(dbh)
-        update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
         # make any scripted edits to the load segments table
         import fix_load_segments
-        fix_load_segments.repair(dbh)
+        ifot_loads = fix_load_segments.repair(ifot_loads)
+        update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
         db_loads = dbh.fetchall("""select * from load_segments 
                                    where datestart >= '%s' and datestart <= '%s'
                                    order by datestart   
