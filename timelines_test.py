@@ -38,7 +38,9 @@ def test_loads():
         't/july_fixed.rdb',
         't/2009:248:12:39:44.351.rdb',
         't/2009:274:22:25:44.351.rdb',
-    
+        't/cut_cl110_1409.rdb',
+        't/cut_cl304_0504.rdb',
+        't/cut_cl352_1208.rdb',
         ]
     
     # fiducial text file dumps of cmd_states to match above load_segments
@@ -50,7 +52,10 @@ def test_loads():
         't/2009:214:22:44:19.592.dat',
         't/july_fixed.dat',
         't/2009:248:12:39:44.351.dat',
-        't/2009:274:22:25:44.351.dat'
+        't/2009:274:22:25:44.351.dat',
+        't/cut_cl110_1409.dat',
+        't/cut_cl304_0504.dat',
+        't/cut_cl352_1208.dat',
         ]
     
     for load_rdb, state_file in izip( good_a, good_b):
