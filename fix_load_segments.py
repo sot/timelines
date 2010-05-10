@@ -18,24 +18,24 @@ def get_options():
 
 def repair( dbh ):
     dbh.verbose = True
-    dbh.execute("delete from load_segments where load_segment = 'CL304:0504' and year = 2003;")
+    dbh.execute("delete from load_segments where load_segment = 'CL304:0504' and year = 2003")
 
-    dbh.execute("update load_segments set datestop='2008:353:05:00:00.000' where load_segment = 'CL352:1208' and year = 2008;")
-    dbh.execute("update load_segments set fixed_by_hand=1 where load_segment = 'CL352:1208' and year = 2008;")
+    dbh.execute("update load_segments set datestop='2008:353:05:00:00.000' where load_segment = 'CL352:1208' and year = 2008")
+    dbh.execute("update load_segments set fixed_by_hand=1 where load_segment = 'CL352:1208' and year = 2008")
 
     # CL110:1404 was run, not CL110:1409
-    dbh.execute("delete from load_segments where load_segment = 'CL110:1409' and year = 2003;")
+    dbh.execute("delete from load_segments where load_segment = 'CL110:1409' and year = 2003")
     # and delete the real one so the re-insert always works
-    dbh.execute("delete from load_segments where load_segment = 'CL110:1404' and year = 2003;")
+    dbh.execute("delete from load_segments where load_segment = 'CL110:1404' and year = 2003")
     cmd_idx = int(DateTime('2003:110:14:07:09.439').secs)
     dbh.execute("""insert into load_segments values 
-                  (%d, 'CL110:1404', 2003, '2003:110:14:07:09.439', '2003:112:00:00:31.542', 130, 1);""" % cmd_idx)
+                  (%d, 'CL110:1404', 2003, '2003:110:14:07:09.439', '2003:112:00:00:31.542', 130, 1)""" % cmd_idx)
 
     # CL188:0402 is missing
-    dbh.execute("delete from load_segments where load_segment = 'CL188:0402' and year = 2009;")
+    dbh.execute("delete from load_segments where load_segment = 'CL188:0402' and year = 2009")
     cmd_idx = int(DateTime('2009:188:04:00:00.000').secs)
     dbh.execute("""insert into load_segments values 
-                  (%d, 'CL188:0402', 2009, '2009:188:04:00:00.000', '2009:188:20:57:33.571', 129, 1);""" % cmd_idx)
+                  (%d, 'CL188:0402', 2009, '2009:188:04:00:00.000', '2009:188:20:57:33.571', 129, 1)""" % cmd_idx)
     dbh.verbose = False
 
 def main():
