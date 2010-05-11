@@ -5,6 +5,16 @@ from Chandra.Time import DateTime
 
 
 def repair(ifot_loads):
+    """
+    Make any known edits to a recarray of load segments.  This is called
+    in update_load_seg_db.py before loads are inserted.  Returns a new recarray
+    with the edits.
+
+    :param ifot_loads: numpy.recarray from the (Ska.Table) parsed rdb of load segments from arc/iFOT
+    :rtype: numpy.recarray
+    
+    """
+
     import numpy as np
 
     # delete a load that was never run
