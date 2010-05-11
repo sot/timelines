@@ -27,8 +27,12 @@ The key elements of the timelines project are:
 
 Helper elements include:
 
-  - ``fix_load_segments.py``: script to implement "manual" database
-    fixes for load_segments (that are not yet included in iFOT)
+  - ``fix_load_segments.py``: module to implement "manual" database
+    fixes for load_segments (that are not yet included in iFOT).  If
+    a load needs to be modified after it has rolled off of the
+    current arc/iFOT load segment rdb, modify fix_load_segments.py and then call
+    update_load_seg_db.py with a constructed rdb that includes the
+    load segment that needs modification.
   - ``fix_tl_processing.py``: script to implement "manual" database
     fixes for the command load summary file parsing tables
     (tl_built_loads, tl_processing)
@@ -48,6 +52,26 @@ of states stored in the testing directory.
 Tests may be run with:
 
    nosetests timelines_test.py
+
+If there is a diff in the output:
+
+  .Checking t/july_fixed.rdb
+  Made Test States in /tmp/tmpyOgXJT
+  Diff in /tmp/tmpyOgXJT
+
+look at the html diff (e.g. /tmp/tmpyOgXJT/diff.html) or manually diff the
+states with the expected states, for example:
+
+  meld /tmp/tmpyOgXJT/test_states.dat t/july_fixed.dat
+
+If the diff is expected, due to a change in nonload commands since the
+creation of the fiducial data, update the fiducial data:
+
+  cp /tmp/tmpyOgXJT/test_states.dat t/july_fixed.dat                                    
+
+and commit the change in the timelines project.
+
+
 
 The utility scripts "timelines_make_testdb.py" and
 "timelines_check_testdb.py" are provided to allow more manual testing:
