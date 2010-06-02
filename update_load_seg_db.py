@@ -420,7 +420,7 @@ def clear_timeline( id, dbh=None, dryrun=False ):
         dbh.execute(cmd)
 
 
-def clear_rel_timelines( load_segments, dbh=None ):
+def clear_rel_timelines( load_segments, dbh=None, dryrun=False ):
     """
     Remove timelines related to (fk constrained to) load_segments from the timelines db
 
@@ -438,7 +438,7 @@ def clear_rel_timelines( load_segments, dbh=None ):
                              % (timeline['id']))
 
             for timeline in db_timelines:
-                clear_timeline( timeline['id'], dbh=dbh )
+                clear_timeline( timeline['id'], dbh=dbh, dryrun=dryrun )
 
 
 
@@ -457,7 +457,7 @@ def get_last_timeline(dbh=None):
                                
 
 
-def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
+def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     """
     Update the load_segments table with the loads from an RDB file.
 
@@ -482,12 +482,22 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
-    db_loads = dbh.fetchall("""select * from load_segments 
-                               where datestart >= '%s' and datestart <= '%s'
-                               order by datestart """ % ( ifot_loads[0]['datestart'],
-                               ifot_loads[-1]['datestop'],
-                               )
+    if test:
+        db_loads = dbh.fetchall("""select * from load_segments 
+                                   where datestart >= '%s' and datestart <= '%s'
+                                   order by datestart """ % (
+                                   ifot_loads[0]['datestart'],
+                                   ifot_loads[-1]['datestop'],
+                                   )
                            )
+    else:
+        db_loads = dbh.fetchall("""select * from load_segments 
+                                   where datestart >= '%s' 
+                                   order by datestart """ % (
+                                   ifot_loads[0]['datestart'],
+                                   )
+                                )
+
     
     # if no overlap on time range, check for an empty table (which should be OK)
     if len(db_loads) == 0:
@@ -527,8 +537,8 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False):
         cmd = ("DELETE FROM load_segments WHERE datestart >= '%s'"
                % db_loads[i_diff]['datestart'] )
         log.info('LOAD_SEG INFO: ' + cmd)
+        clear_rel_timelines( db_loads[i_diff:], dbh=dbh, dryrun=dryrun)
         if not dryrun:
-            clear_rel_timelines( db_loads[i_diff:], dbh=dbh)
             dbh.execute(cmd)
 
     # check for overlap in the loads... the check_load_overlap just logs warnings
