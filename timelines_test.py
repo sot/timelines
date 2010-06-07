@@ -282,7 +282,7 @@ def make_table( dbfilename, tstart=None, tstop=None):
     
 
 
-def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
+def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=None, verbose=False ):
     """
     From the available directories and load segment file
     Populate a load segments table and a timelines table
@@ -301,10 +301,15 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
     parse_cmd = os.path.join('./parse_cmd_load_gen.pl')
     bash( '%s --touch_file %s --mp_dir %s --server %s' %
                 ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
-    
+
+    #    update_load_seg_db.main(load_seg_dir, test=True, server=dbfilename,
+    #                     verbose=True, dryrun=False)
     update_load_seg = os.path.join('./update_load_seg_db.py')
-    load_seg_output = bash( '%s --test --server %s --loadseg_rdb_dir %s --verbose' %
+    load_seg_output = bash( "%s --test --server %s --loadseg_rdb_dir '%s' --verbose" %
                             ( update_load_seg, dbfilename, load_seg_dir ))
+        
+    
+        
 
     # update_cmd_states backs up to the first NPNT before the given tstart...
     # backing up doesn't work for this, because we don't have timelines to make 
@@ -331,12 +336,13 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, verbose=False ):
     cmd_state_mxstart = DateTime( state['datestop'] ).mxDateTime + mx.DateTime.TimeDelta( seconds=1 ) 
     cmd_state_datestart = DateTime(cmd_state_mxstart).date
 
-#    fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
-#    bash("%s --server %s " % (fix_timelines, dbfilename ))
+    #fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
+    #bash("%s --server %s " % (fix_timelines, dbfilename ))
 
-#    print "Adding Nonload Commands"
-    nonload_cmds = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'nonload_cmds_archive.py')
-    bash("%s --server %s " % (nonload_cmds, dbfilename ))
+    #print "Adding Nonload Commands"
+    if nonload_cmd_file is None:
+        nonload_cmd_file = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'nonload_cmds_archive.py')
+    bash("%s --server %s " % (nonload_cmd_file, dbfilename ))
 
 #    print "Updating States from %s" % cmd_state_datestart
     update_cmd_states = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'update_cmd_states.py')
