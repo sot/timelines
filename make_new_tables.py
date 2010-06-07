@@ -37,7 +37,14 @@ def main():
     for drop in ('VIEW timeline_loads', 'TABLE timelines', 'TABLE load_segments',
                  'TABLE cmd_fltpars', 'TABLE cmd_intpars', 'TABLE cmds',
                  'TABLE cmd_states',
-                 'TABLE tl_processing', 'TABLE tl_built_loads', 'TABLE tl_obsids'):
+                 'TABLE tl_processing', 'TABLE tl_built_loads', 'TABLE tl_obsids',
+                 'TRIGGER fkd_load_segment_id' ,
+                 'TRIGGER fkd_timeline_id_cmds' ,
+                 'TRIGGER fkd_timeline_id_cmd_fltpars' ,
+                 'TRIGGER fkd_timeline_id_cmd_intpars' ,
+                 'TRIGGER fkd_cmd_id_cmd_fltpars',
+                 'TRIGGER fkd_cmd_id_cmd_intpars'):
+
         try:
             db.execute('DROP %s' % drop)
         except:
@@ -55,6 +62,12 @@ def main():
         cmd = file(sqldef + '_def.sql').read()
         db.execute(cmd, commit=True)
 
+    # and force the use of a few triggers to simulate some foreign-key constraints
+    #trigger_cmds = file('sqlite_triggers.sql').read()
+    #db.execute(trigger_cmds, commit=True)
+    from Ska.Shell import bash
+    bash("sqlite3 %s < sqlite_triggers.sql" % opt.server, )
+    
 
     if opt.tstart:
 
