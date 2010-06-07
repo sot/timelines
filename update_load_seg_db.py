@@ -35,9 +35,13 @@ def get_options():
     parser.add_option("--test",
                       action='store_true',
                       help="In test mode, allow changes to db before 2009...")
-    parser.add_option("-v", "--verbose",
+    parser.add_option("--verbose",
                       action='store_true',
-                      )
+                      help="verbose"),
+    parser.add_option("--traceback",
+                      action='store_true',
+                      default=True,
+                      help='Enable tracebacks')
     parser.add_option("--loadseg_rdb_dir",
                       default=os.path.join(os.environ['SKA'], 'data', 'arc', 'iFOT_events', 'load_segment'),
                       help="directory containing iFOT rdb files of load segments")
@@ -269,9 +273,9 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
 
     # get existing entries
     db_timelines = dbh.fetchall("""select * from timelines 
-                                   where datestop >= '%s' and datestart <= '%s'
+                                   where datestop >= '%s'
                                    order by datestart 
-                                   """ % ( timelines[0]['datestart'], timelines[-1]['datestop'] ))
+                                   """ % ( timelines[0]['datestart']))
        
     from itertools import count, izip
     if len(db_timelines) > 0:
@@ -310,7 +314,7 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     defunct_tl = dbh.fetchall( findcmd )
     if len(defunct_tl):
         for id in defunct_tl.id:
-            clear_timeline( id )
+            clear_timeline( id, dbh=dbh, dryrun=dryrun )
             
         
     # Insert new timelines[i_diff:] 
@@ -323,10 +327,8 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
                                              timeline['id'] )
         log.debug(insert_string)
         if not dryrun:
-            try:
-                dbh.insert(timeline, 'timelines')
-            except IntegrityError:
-                log.warn('Could not insert timeline at %s' % timeline['datestart']) 
+            dbh.insert(timeline, 'timelines')
+
 
 
 def rdb_to_db_schema( orig_ifot_loads ):
@@ -482,22 +484,12 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
-    if test:
-        db_loads = dbh.fetchall("""select * from load_segments 
-                                   where datestart >= '%s' and datestart <= '%s'
-                                   order by datestart """ % (
-                                   ifot_loads[0]['datestart'],
-                                   ifot_loads[-1]['datestop'],
-                                   )
-                           )
-    else:
-        db_loads = dbh.fetchall("""select * from load_segments 
-                                   where datestart >= '%s' 
-                                   order by datestart """ % (
-                                   ifot_loads[0]['datestart'],
-                                   )
-                                )
-
+    db_loads = dbh.fetchall("""select * from load_segments 
+                               where datestart >= '%s' 
+                               order by datestart """ % (
+                               ifot_loads[0]['datestart'],
+                               )
+                            )
     
     # if no overlap on time range, check for an empty table (which should be OK)
     if len(db_loads) == 0:
@@ -559,7 +551,8 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     
 
         
-def main():
+def main(loadseg_rdb_dir, dryrun=False, test=False,
+         dbi='sqlite', server='db_base.db3' ,verbose=False):
     """
     Command Load Segment Table Updater
     
@@ -577,16 +570,15 @@ def main():
 
     """
 
-    (opt,args) = get_options()
-    dbh = DBI(dbi=opt.dbi, server=opt.server)
+    dbh = DBI(dbi=dbi, server=server)
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARN)
-    if opt.verbose:
+    if verbose:
         ch.setLevel(logging.DEBUG)
     log.addHandler(ch)
-    if opt.dryrun:
+    if dryrun:
         log.info("LOAD_SEG INFO: Running in dryrun mode")
-    loadseg_dir = opt.loadseg_rdb_dir
+    loadseg_dir = loadseg_rdb_dir
     # get the loads from the arc ifot area
     all_rdb_files = glob.glob(os.path.join(loadseg_dir, "*"))
     rdb_file = max(all_rdb_files)
@@ -601,21 +593,28 @@ def main():
         # make any scripted edits to the load segments table
         import fix_load_segments
         ifot_loads = fix_load_segments.repair(ifot_loads)
-        update_loads_db( ifot_loads, dbh=dbh, test=opt.test, dryrun=opt.dryrun )    
+        update_loads_db( ifot_loads, dbh=dbh, test=test, dryrun=dryrun )    
         db_loads = dbh.fetchall("""select * from load_segments 
-                                   where datestart >= '%s' and datestart <= '%s'
-                                   order by datestart   
-                                  """ % ( ifot_loads[0]['datestart'],
-                                          ifot_loads[-1]['datestop'],
-                                        )
-                                    )    
-        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=opt.dryrun, test=opt.test )
+                                   where datestart >= '%s' order by datestart   
+                                  """ % ( ifot_loads[0]['datestart'] )
+                                )
+            
+        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=dryrun, test=test )
 
     log.removeHandler(ch)
 
 if __name__ == "__main__":
-    main()
-    
+
+    (opt,args) = get_options()
+    try:
+        main(opt.loadseg_rdb_dir, dryrun=opt.dryrun, 
+             test=opt.test, dbi=opt.dbi, server=opt.server,verbose=opt.verbose)
+    except Exception, msg:
+        if opt.traceback:
+            raise
+        else:
+            print "ERROR:", msg
+            sys.exit(1)
 
 
 
