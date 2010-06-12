@@ -16,11 +16,15 @@ from functools import partial
 
 import update_load_seg_db
 
+
+
+
+
 err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
 
 
-### actual tests.
+#### actual tests.
 def test_loads():
     """
     Build testing states and test against fiducial data
@@ -28,48 +32,48 @@ def test_loads():
     Return testing generators for each list of loads to be checked
     """
 
-    # load segment files 
-    good_a = [
-        't/2008:048:08:07:00.000.rdb',
-        't/2010:023:15:15:00.000.rdb',
-        't/2009:164:04:11:15.022.rdb',
-        't/2009:193:20:30:02.056.rdb',
-        't/2009:214:22:44:19.592.rdb',
-        't/july_fixed.rdb',
-        't/2009:248:12:39:44.351.rdb',
-        't/2009:274:22:25:44.351.rdb',
-        't/cut_cl110_1409.rdb',
-        't/cut_cl304_0504.rdb',
-        't/cut_cl352_1208.rdb',
+    # load segment files and states to test against
+    good = [ dict(loads='t/2008:048:08:07:00.000.rdb',
+                  states='t/2008:048:08:07:00.000.dat'),
+             dict(loads='t/2010:023:15:15:00.000.rdb',
+                  states='t/2010:023:15:15:00.000.dat'),
+             dict(loads='t/2010:023:15:15:00.000.rdb',
+                  states='t/2010:023:15:15:00.000.dat'),
+             dict(loads='t/2009:164:04:11:15.022.rdb',
+                  states='t/2009:164:04:11:15.022.dat'),
+             dict(loads='t/2009:193:20:30:02.056.rdb',
+                  states='t/2009:193:20:30:02.056.dat'),
+             dict(loads='t/2009:214:22:44:19.592.rdb',
+                  states='t/2009:214:22:44:19.592.dat'),
+             dict(loads='t/july_fixed.rdb',
+                  states='t/july_fixed.dat'),
+             dict(loads='t/2009:248:12:39:44.351.rdb',
+                  states='t/2009:248:12:39:44.351.dat'),
+             dict(loads='t/2009:274:22:25:44.351.rdb',
+                  states='t/2009:274:22:25:44.351.dat'),
+             dict(loads='t/cut_cl110_1409.rdb',
+                  states='t/cut_cl110_1409.dat'),
+             dict(loads='t/cut_cl304_0504.rdb',
+                  states='t/cut_cl304_0504.dat'),
+             dict(loads='t/cut_cl352_1208.rdb',
+                  states='t/cut_cl352_1208.dat'),
         ]
-    
-    # fiducial text file dumps of cmd_states to match above load_segments
-    good_b =  [
-        't/2008:048:08:07:00.000.dat',
-        't/2010:023:15:15:00.000.dat',
-        't/2009:164:04:11:15.022.dat',
-        't/2009:193:20:30:02.056.dat',
-        't/2009:214:22:44:19.592.dat',
-        't/july_fixed.dat',
-        't/2009:248:12:39:44.351.dat',
-        't/2009:274:22:25:44.351.dat',
-        't/cut_cl110_1409.dat',
-        't/cut_cl304_0504.dat',
-        't/cut_cl352_1208.dat',
-        ]
-    
-    for load_rdb, state_file in izip( good_a, good_b):
+
+    for ftest in good:
+        load_rdb = ftest['loads']
+        state_file = ftest['states']
         err.write("Checking %s\n" % load_rdb )
         f = partial( check_loads, load_rdb, state_file, True)
         f.description = "%s does not match %s states" % (load_rdb, state_file)
         yield(f,)
 
-    # load segment list
-    bad_a = [ 't/july_fixed.rdb',]
-    # *WRONG* fiducial states for above
-    bad_b = [ 't/july_broken.dat', ]
+    # *INCORRECT* fiducial states to check failure
+    bad = [dict(loads='t/july_fixed.rdb',
+                states='t/july_broken.dat')]
 
-    for load_rdb, state_file in izip( bad_a, bad_b):
+    for ftest in bad:
+        load_rdb = ftest['loads']
+        state_file = ftest['states']
         err.write("Checking %s\n" % load_rdb )
         f = partial( check_loads, load_rdb, state_file, False)
         f.description = "%s unexpectedly matches %s states" % (load_rdb, state_file)
@@ -103,6 +107,7 @@ def clean_states( outdir ):
 
     shutil.rmtree( outdir )
     err.write("Deleted Temp Directory %s\n" % outdir )
+
 
 
 def check_loads( load_rdb, state_file, expect_match=True):
@@ -144,12 +149,19 @@ def check_loads( load_rdb, state_file, expect_match=True):
         err.write("Expected mismatch in Loads from %s\n" % load_rdb )
         clean_states(outdir)    
 
+    
+
+
 def test_load_to_dir():
 
-    good_a = ['NOV2408C', 'feb0110c']
-    good_b = [ '/2008/NOV2408/oflsc/', '/2010/FEB0110/oflsc/']
-    
-    for weekabr, week in izip( good_a, good_b ):
+    good = [dict(weekabr='NOV2408C',
+                 week='/2008/NOV2408/oflsc/'),
+            dict(weekabr='feb0110c',
+                 week='/2010/FEB0110/oflsc/')]
+
+    for ftest in good:
+        weekabr = ftest['weekabr']
+        week = ftest['week']
         err.write("Checking load_to_dir \n" )
         assert week == load_to_dir(weekabr)
 
@@ -578,24 +590,24 @@ def run_model(opt, dbfile):
 def test_get_built_load():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
- 
-    good_a = [{'datestart': '2010:052:01:59:26.450',
-              'datestop': '2010:052:12:20:06.101',
-              'fixed_by_hand': 0,
-              'id': 383104832,
-              'load_scs': 128,
-              'load_segment': 'CL052:0101',
-              'year': 2010},]
-    good_b = [{'file': 'C044_2301.sum',
-              'first_cmd_time': '2010:052:01:59:26.450',
-              'last_cmd_time': '2010:052:12:20:06.101',
-              'load_scs': 128,
-              'load_segment': 'CL052:0101',
-              'sumfile_modtime': 1266030114.0,
-              'year': 2010},]
-             
 
-    for load, built_load in izip( good_a, good_b):
+    good = [dict(load={'datestart': '2010:052:01:59:26.450',
+                         'datestop': '2010:052:12:20:06.101',
+                         'fixed_by_hand': 0,
+                         'id': 383104832,
+                         'load_scs': 128,
+                         'load_segment': 'CL052:0101',
+                         'year': 2010},
+                 built_load={'file': 'C044_2301.sum',
+                               'first_cmd_time': '2010:052:01:59:26.450',
+                               'last_cmd_time': '2010:052:12:20:06.101',
+                               'load_scs': 128,
+                               'load_segment': 'CL052:0101',
+                               'sumfile_modtime': 1266030114.0,
+                               'year': 2010})]
+    for ftest in good:
+        load = ftest['load']
+        built_load = ftest['built_load']
         err.write("Checking get_built_loads\n")
         assert built_load == update_load_seg_db.get_built_load( load, dbh)
 
@@ -604,29 +616,30 @@ def test_get_processing():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
  
-    good_a = [{'file': 'C044_2301.sum',
-              'first_cmd_time': '2010:052:01:59:26.450',
-              'last_cmd_time': '2010:052:12:20:06.101',
-              'load_scs': 128,
-              'load_segment': 'CL052:0101',
-              'sumfile_modtime': 1266030114.0,
-              'year': 2010},]
-    good_b = [{'bcf_cmd_count': None,
-              'continuity_cmds': None,
-              'dir': '/2010/FEB1310/oflsb/',
-              'execution_tstart': '2010:044:03:01:27.000',
-              'file': 'C044_2301.sum',
-              'planning_tstart': '2010:044:23:00:00.000',
-              'planning_tstop': '2010:052:12:23:00.000',
-              'processing_tstart': '2010:044:23:00:00.000',
-              'processing_tstop': '2010:052:12:23:00.000',
-              'replan': 0,
-              'replan_cmds': None,
-              'sumfile_modtime': 1266030114.0,
-              'year': 2010},
-             ]
+    good = [dict(built_load={'file': 'C044_2301.sum',
+                               'first_cmd_time': '2010:052:01:59:26.450',
+                               'last_cmd_time': '2010:052:12:20:06.101',
+                               'load_scs': 128,
+                               'load_segment': 'CL052:0101',
+                               'sumfile_modtime': 1266030114.0,
+                               'year': 2010},
+                 proc={'bcf_cmd_count': None,
+                         'continuity_cmds': None,
+                         'dir': '/2010/FEB1310/oflsb/',
+                         'execution_tstart': '2010:044:03:01:27.000',
+                         'file': 'C044_2301.sum',
+                         'planning_tstart': '2010:044:23:00:00.000',
+                         'planning_tstop': '2010:052:12:23:00.000',
+                         'processing_tstart': '2010:044:23:00:00.000',
+                         'processing_tstop': '2010:052:12:23:00.000',
+                         'replan': 0,
+                         'replan_cmds': None,
+                         'sumfile_modtime': 1266030114.0,
+                         'year': 2010})]
 
-    for built_load, proc in izip( good_a, good_b):
+    for ftest in good:
+        built_load = ftest['built_load']
+        proc = ftest['proc']
         err.write("Checking get_processing \n")
         assert proc == update_load_seg_db.get_processing( built_load, dbh)
 
@@ -635,27 +648,156 @@ def test_weeks_for_load():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
 
-    good_a = [ {'datestart': '2010:052:01:59:26.450',
-                'datestop': '2010:052:12:20:06.101',
-                'fixed_by_hand': 0,
-                'id': 383104832,
-                'load_scs': 128,
-                'load_segment': 'CL052:0101',
-                'year': 2010}, ]
-    good_b = [ [{'datestart': '2010:052:01:59:26.450',
-                 'datestop': '2010:052:12:20:06.101',
-                 'dir': '/2010/FEB1310/oflsb/',
-                 'incomplete': 0,
-                 'load_segment_id': 383104832,
-                 'replan': 0}], ]
+    good = [dict(load= {'datestart': '2010:052:01:59:26.450',
+                          'datestop': '2010:052:12:20:06.101',
+                          'fixed_by_hand': 0,
+                          'id': 383104832,
+                          'load_scs': 128,
+                          'load_segment': 'CL052:0101',
+                          'year': 2010},
+                 new_timelines= [{'datestart': '2010:052:01:59:26.450',
+                                    'datestop': '2010:052:12:20:06.101',
+                                    'dir': '/2010/FEB1310/oflsb/',
+                                    'incomplete': 0,
+                                    'load_segment_id': 383104832,
+                                    'replan': 0}])]
 
-    for load, new_timelines in izip( good_a, good_b ):
-
+    for ftest in good:
+        load = ftest['load']
+        new_timelines=ftest['new_timelines']
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
 
 
+def test_nsm_2010(outdir=tempfile.mkdtemp()):
+
+        
+    err.write("Running nsm 2010 simulation \n" )
+    # Simulate timelines and cmd_states around day 150 NSM
+    dbfilename = os.path.join(outdir, 'test.db3')
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    # use a clone of the load_segments "time machine"
+    tm = 'iFOT_time_machine'
+    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
+    if not os.path.exists(tm):
+        c_output = bash_shell("hg clone %s" % repo_dir)
+    load_rdb = os.path.join(tm, 'load_segment.rdb')
+
+
+    # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
+    shutil.copyfile('t/nsm_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    # when to begin simulation
+    start_time = mx.DateTime.Date(2010,5,30,2,0,0)
+    # load interrupt time
+    int_time = mx.DateTime.Date(2010,5,30,3,0,0)
+    # hours between simulated cron task to update timelines
+    step = 12
+
+    for hour_step in np.arange( 0, 72, step):
+        ifot_time = start_time + mx.DateTime.DateTimeDelta(0,hour_step)
+        # mercurial python stuff doesn't seem to work.
+        # grab version of iFOT_time_machine just before simulated date
+        
+        os.chdir(tm)
+        u_output = bash_shell("""hg update --date "%s%s" """ % (
+            '<', ifot_time.strftime()))
+        os.chdir("..")
+
+        # and copy that load_segment file to testing/working directory
+        shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
+
+        # set up rest of testing components around that load_segment file
+        (outdir, load_dir, mp_dir) = data_setup( load_rdb,
+                                                 outdir=outdir )
+        if not os.path.exists(dbfilename):
+            make_table( dbfilename )
+
+        # run the interrupt commanding before running the rest of the commands
+        # if the current time is the first simulated cron pass after the
+        # actual insertion of the interrupt commands
+        dtime = ifot_time - int_time
+        if dtime.hours >= 0 and dtime.hours < step:
+            print "Performing interrupt"
+            bash_shell("/proj/sot/ska/share/cmd_states/add_nonload_cmds.py " 
+                       + " --dbi=sqlite --cmd-set nsm "
+                       + " --date '%s'" % DateTime(int_time).date
+                       + " --interrupt "
+                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
+                       + " --server %s/test.db3" % outdir )
+
+            bash_shell("/proj/sot/ska/share/cmd_states/add_nonload_cmds.py " 
+                       + " --dbi=sqlite --cmd-set scs107 "
+                       + " --date '%s'" % DateTime(int_time).date
+                       + " --interrupt "
+                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
+                       + " --server %s/test.db3" % outdir )
+
+
+        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
+        # update_load_seg_db.py, update_cmd_states.py
+        populate_states( outdir, load_dir, mp_dir, dbfilename,
+                         "%s/nonload_cmds_archive.py" % outdir)
+
+        # write out the timelines and states after the tasks are complete
+#        bash_shell("""sqlite3 %s/test.db3 "select * from timelines" > %s/%s_timelines.txt """ % (
+#            outdir, outdir, DateTime(ifot_time).date))
+        dbh = Ska.DBI.DBI(dbi='sqlite',server='%s/test.db3' % outdir)
+        timelines = dbh.fetchall("select * from timelines")
+        test_timelines = string_timelines(timelines)
+        tl = open( os.path.join( outdir, '%s_test_timelines.dat' % DateTime(ifot_time).date), 'w')
+        tl.writelines(test_timelines)
+        tl.close()
+        # retrieve fiducial timelines
+        ft_file = "t/%s_fid_timelines.dat" % DateTime(ifot_time).date
+        if os.path.exists(ft_file):
+            fl = open(ft_file, 'r')
+            fiducial_timelines = fl.readlines()
+        else:
+            fiducial_timelines = ''
+        # compare
+        differ = difflib.context_diff( fiducial_timelines, test_timelines )
+        difflines = [ line for line in differ ]
+        if len(difflines):
+            diff_out = open(os.path.join(outdir, 'diff_timelines.html'), 'w')
+            htmldiff = difflib.HtmlDiff()
+            htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
+            diff = htmldiff.make_file( fiducial_timelines, test_timelines, context=True )
+            diff_out.writelines(diff)
+            err.write("Diff in %s for NSM timelines for %s\n" % (outdir,
+                                                                 DateTime(ifot_time).date ))
+        assert len(difflines) == 0 
+
+        test_states = text_states( load_rdb, dbfilename )
+        ts = open( os.path.join( outdir, '%s_test_states.dat' % DateTime(ifot_time).date), 'w')
+        ts.writelines(test_states)
+        ts.close()
+        # retrieve fiducial states
+        fs_file = "t/%s_fid_states.dat" % DateTime(ifot_time).date
+        if os.path.exists(fs_file):
+            fs = open(fs_file, 'r')
+            fiducial_states = fs.readlines()
+        else:
+            fiducial_states = ''
+        # compare
+        differ = difflib.context_diff( fiducial_states, test_states )
+        difflines = [ line for line in differ ]
+        if len(difflines):
+            diff_out = open(os.path.join(outdir, 'diff_states.html'), 'w')
+            htmldiff = difflib.HtmlDiff()
+            htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
+            diff = htmldiff.make_file( fiducial_states, test_states, context=True )
+            diff_out.writelines(diff)
+            err.write("Diff in %s for NSM states for %s\n" % (outdir,
+                                                                 DateTime(ifot_time).date ))
+        assert len(difflines) == 0 
+
+    # if we didn't fail an assert, remove the testing directory
+    clean_states(outdir)
 
 
 
