@@ -4,7 +4,7 @@ include /proj/sot/ska/include/Makefile.FLIGHT
 
 
 SHARE = update_load_seg_db.py parse_cmd_load_gen.pl update_load_seg_db.py \
-	make_new_tables.py fix_load_segments.py fix_tl_processing.py \
+	fix_load_segments.py fix_tl_processing.py \
 	load_segments_def.sql timeline_loads_def.sql timelines_def.sql tl_dep_def.sql 
 DATA = task_schedule.cfg
 
