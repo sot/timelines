@@ -10,7 +10,7 @@ import mx.DateTime
 import Ska.DBI
 from Chandra.Time import DateTime
 
-REAL_SKA = '/proj/sot/ska'
+SKA = os.environ['SKA']
 
 def get_options():
     from optparse import OptionParser
@@ -52,12 +52,12 @@ def main():
                 print '%s not found' % drop
             
 
-    # use local versions of the files in this project and the REAL_SKA versions of others
+    # use local versions of the files in this project and the SKA versions of others
     for sqldef in ('load_segments', 'timelines', 'timeline_loads', 'tl_dep',
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_fltpars'),
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_intpars'),
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmds'),
-                   os.path.join(REAL_SKA, 'data', 'cmd_states', 'cmd_states'),
+                   os.path.join(SKA, 'data', 'cmd_states', 'cmd_fltpars'),
+                   os.path.join(SKA, 'data', 'cmd_states', 'cmd_intpars'),
+                   os.path.join(SKA, 'data', 'cmd_states', 'cmds'),
+                   os.path.join(SKA, 'data', 'cmd_states', 'cmd_states'),
                    ):
         cmd = file(sqldef + '_def.sql').read()
         db.execute(cmd, commit=True)
