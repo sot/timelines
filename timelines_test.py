@@ -16,10 +16,6 @@ from functools import partial
 
 import update_load_seg_db
 
-
-
-
-
 err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
 
@@ -79,9 +75,6 @@ def test_loads():
         f.description = "%s unexpectedly matches %s states" % (load_rdb, state_file)
         yield(f,)
 
-
-
-
 def make_states( load_rdb ):
     """
     Setup db and states in a temp directory for quick nose testing
@@ -90,13 +83,17 @@ def make_states( load_rdb ):
     :rtype: (outdir, dbfilename)
     """
 
-    (outdir, load_dir, mp_dir) = data_setup( load_rdb, outdir=tempfile.mkdtemp() )
+    outdir = re.sub(r'\.rdb$', '', load_rdb)
+    if os.path.exists(outdir):
+        clean_states(outdir)
+    os.makedirs(outdir)
+        
+    (outdir, load_dir, mp_dir) = data_setup( load_rdb, outdir=outdir )
     dbfilename = os.path.join( outdir, 'test.db3')
     make_table( dbfilename )
     populate_states( outdir, load_dir, mp_dir, dbfilename )
     err.write("Made Test States in %s\n" % outdir )
     return (outdir, dbfilename)
-
 
 def clean_states( outdir ):
     """
@@ -104,11 +101,8 @@ def clean_states( outdir ):
 
     :param outdir: testing directory
     """
-
     shutil.rmtree( outdir )
-    err.write("Deleted Temp Directory %s\n" % outdir )
-
-
+    err.write("Deleted output directory %s\n" % outdir )
 
 def check_loads( load_rdb, state_file, expect_match=True):
     """
@@ -149,11 +143,7 @@ def check_loads( load_rdb, state_file, expect_match=True):
         err.write("Expected mismatch in Loads from %s\n" % load_rdb )
         clean_states(outdir)    
 
-    
-
-
 def test_load_to_dir():
-
     good = [dict(weekabr='NOV2408C',
                  week='/2008/NOV2408/oflsc/'),
             dict(weekabr='feb0110c',
@@ -164,9 +154,6 @@ def test_load_to_dir():
         week = ftest['week']
         err.write("Checking load_to_dir \n" )
         assert week == load_to_dir(weekabr)
-
-
-             
 
 def load_to_dir( week ):
     """
@@ -268,8 +255,6 @@ def data_setup( load_rdb, outdir=tempfile.mkdtemp(),
 
     return ( outdir, os.path.join(outdir, 'loads'), os.path.join(outdir, 'mp'))
 
-
-
 def make_table( dbfilename, tstart=None, tstop=None):
     """ 
     Initialize tables
@@ -290,9 +275,6 @@ def make_table( dbfilename, tstart=None, tstop=None):
         if tstop:
             cmd += " --tstop %s " % DateTime(tstop).date
         bash(cmd)
-
-    
-
 
 def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=None, verbose=False ):
     """
@@ -363,7 +345,6 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
 
     return dbfilename
 
-
 def string_states( states):
     """
     Write states recarray out to a string
@@ -413,7 +394,6 @@ def text_states( load_rdb, dbfile ):
     test_lines = string_states( test_states )
     return test_lines
 
-
 def cmp_states(opt, dbfile ):
     """
     Compare sqlite testing database in dbfile with sybase
@@ -424,7 +404,6 @@ def cmp_states(opt, dbfile ):
     :rtype: None, diff written to opt.outdir/diff.html
 
     """
-
     loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
     datestart = loads[0]['TStart (GMT)']
     datestop = loads[-1]['TStop (GMT)']
@@ -474,7 +453,6 @@ def string_timelines(timelines):
         tstring = "%s\t%s\t%s\n" % (t['datestart'], t['datestop'], t['dir'])
         timeline_strings.append(tstring)
     return timeline_strings
-        
 
 def cmp_timelines(opt, dbfile ):
     """
@@ -520,7 +498,6 @@ def cmp_timelines(opt, dbfile ):
         htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
         diff = htmldiff.make_file( db_lines, test_lines, context=True )
         diff_out.writelines(diff)
-
 
 def run_model(opt, dbfile):
     """
@@ -585,8 +562,6 @@ def run_model(opt, dbfile):
                 viols=pred['viols'], proc=proc, 
                 plots_validation=plots_validation)
 
-
-
 def test_get_built_load():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
@@ -643,7 +618,6 @@ def test_get_processing():
         err.write("Checking get_processing \n")
         assert proc == update_load_seg_db.get_processing( built_load, dbh)
 
-
 def test_weeks_for_load():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
@@ -668,10 +642,7 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
-
-
 def test_nsm_2010(outdir=tempfile.mkdtemp()):
-
         
     err.write("Running nsm 2010 simulation \n" )
     # Simulate timelines and cmd_states around day 150 NSM
@@ -798,7 +769,3 @@ def test_nsm_2010(outdir=tempfile.mkdtemp()):
 
     # if we didn't fail an assert, remove the testing directory
     clean_states(outdir)
-
-
-
-
