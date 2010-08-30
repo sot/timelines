@@ -652,10 +652,9 @@ def test_nsm_2010(outdir='t/nsm_2010'):
     err.write("Running nsm 2010 simulation \n" )
     # Simulate timelines and cmd_states around day 150 NSM
     dbfilename = os.path.join(outdir, 'test.db3')
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    else:
+    if os.path.exists(outdir):
         clean_states(outdir)
+    os.makedirs(outdir)
 
     # use a clone of the load_segments "time machine"
     tm = 'iFOT_time_machine'
