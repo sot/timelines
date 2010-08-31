@@ -43,7 +43,7 @@ def repair(ifot_loads):
         # ifot_list except the bad one
         ifot_list = ifot_loads[match == False].tolist()
         ifot_list.append(rec_tuple)
-        ifot_list.sort(lambda x,y: cmp(x[1],y[1]))
+        ifot_list.sort(lambda x,y: cmp(x[0],y[0]))
         new_ifot = np.rec.fromrecords( ifot_list,
                                        dtype=ifot_loads.dtype,
                                        )
@@ -63,7 +63,7 @@ def repair(ifot_loads):
                          '2009:188:04:00:00.000', '2009:188:20:57:33.571', 129, 1)
             ifot_list = ifot_loads.tolist()
             ifot_list.append(rec_tuple)
-            ifot_list.sort(lambda x,y: cmp(x[1],y[1]))
+            ifot_list.sort(lambda x,y: cmp(x[0],y[0]))
             new_ifot = np.rec.fromrecords( ifot_list,
                                            dtype=ifot_loads.dtype,
                                            )
