@@ -47,7 +47,7 @@ def main():
     if not os.path.exists(dbfilename):
         timelines_test.make_table( dbfilename )
 
-    timelines_test.populate_states( outdir, load_dir, mp_dir, dbfilename, opt.verbose)
+    timelines_test.populate_states( outdir, load_dir, mp_dir, dbfilename, verbose=opt.verbose)
 
 if __name__ == '__main__':
     main()
