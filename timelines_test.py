@@ -772,4 +772,7 @@ def test_nsm_2010(outdir='t/nsm_2010'):
         assert len(difflines) == 0 
 
     # if we didn't fail an assert, remove the testing directory
-    clean_states(outdir)
+    try:
+        clean_states(outdir)
+    except OSError:
+        err.write("Passed all tests, but failed to delete dir %s" % outdir)
