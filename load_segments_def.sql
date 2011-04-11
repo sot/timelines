@@ -8,3 +8,4 @@ CREATE TABLE load_segments (
  fixed_by_hand   bit          not null,
  CONSTRAINT pk_load_segments_id PRIMARY KEY (id)
 )
+

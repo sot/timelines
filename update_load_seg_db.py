@@ -29,6 +29,10 @@ def get_options():
     parser.add_option("--server",
                       default='db_base.db3',
                       help="DBI server (<filename>|sybase)")
+    parser.add_option("--user",
+                      help="sybase user, will use Ska.DBI default by default")
+    parser.add_option("--database",
+                      help="sybase database, will use Ska.DBI default by default")
     parser.add_option("--dryrun",
                       action='store_true',
                       help="Do not perform real database updates")
@@ -552,7 +556,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
 
         
 def main(loadseg_rdb_dir, dryrun=False, test=False,
-         dbi='sqlite', server='db_base.db3' ,verbose=False):
+         dbi='sqlite', server='db_base.db3' ,database=None, user=None, verbose=False):
     """
     Command Load Segment Table Updater
     
@@ -570,7 +574,7 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
 
     """
 
-    dbh = DBI(dbi=dbi, server=server)
+    dbh = DBI(dbi=dbi, server=server, database=database, user=user, verbose=verbose)
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARN)
     if verbose:
@@ -608,7 +612,9 @@ if __name__ == "__main__":
     (opt,args) = get_options()
     try:
         main(opt.loadseg_rdb_dir, dryrun=opt.dryrun, 
-             test=opt.test, dbi=opt.dbi, server=opt.server,verbose=opt.verbose)
+             test=opt.test, dbi=opt.dbi, server=opt.server,
+             database=opt.database, user=opt.user,
+             verbose=opt.verbose)
     except Exception, msg:
         if opt.traceback:
             raise
