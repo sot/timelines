@@ -1,3 +1,6 @@
+# these updates are in fix_load_segments.py and this sql should not be executed
+# and will not work after SOSA changes
+
 update timelines set datestop='2008:353:05:00:00.000' where id=345905553;
 update timelines set fixed_by_hand=1 where id=345905553;
 update load_segments set fixed_by_hand=1 where id=345905551;

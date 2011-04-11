@@ -1,21 +1,21 @@
 create table tl_built_loads
 ( 
-year int,
-load_segment varchar(10),
-file varchar(15),
+year int not null,
+load_segment varchar(10) not null,
+file varchar(15) not null,
 first_cmd_time varchar(22),
 last_cmd_time varchar(22),
 load_scs int,
-sumfile_modtime float,
+sumfile_modtime float not null,
 primary key (year, load_segment, file, sumfile_modtime)
 );
 
 create table tl_processing
 ( 
 year int,
-dir varchar(20),
-file varchar(15),
-replan boolean,
+dir varchar(20) not null,
+file varchar(15) not null,
+replan bit default 0 not null,
 continuity_cmds varchar(10),
 replan_cmds varchar(10),
 bcf_cmd_count int,
@@ -31,11 +31,11 @@ primary key (dir, file)
 
 create table tl_obsids
 ( 
-year int,
-load_segment varchar(10),
-dir varchar(20),
-obsid int,
-date varchar(22),
+year int not null,
+load_segment varchar(10) not null,
+dir varchar(20) not null,
+obsid int not null,
+date varchar(22) not null,
 primary key (year, dir, load_segment, obsid, date )
 );
 

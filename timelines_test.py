@@ -192,7 +192,7 @@ def data_setup( load_rdb, outdir=tempfile.mkdtemp(),
     # all the MP dirs that are listed in the rdb file in the LOADSEG.LOAD_NAME
     # field
     loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
-    db = Ska.DBI.DBI(dbi='sybase', numpy=True, verbose=verbose)
+    db = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=verbose)
     # get the modification times of the likely directories
     sumfile_modtimes = []
     for load in loads:
@@ -317,7 +317,7 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
     testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfilename, verbose=verbose )
     first_timeline = testdb.fetchone("select datestart from timelines")
 
-    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=verbose)
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=verbose)
     es_query = """select * from cmd_states
                   where datestop > '%s'
                   order by datestart asc""" % first_timeline['datestart'] 
@@ -421,7 +421,7 @@ def cmp_states(opt, dbfile ):
     ts.writelines(test_lines)
     ts.close()
 
-    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=opt.verbose)    
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=opt.verbose)    
     acadb_states = acadb.fetchall("""select * from cmd_states
                             where datestart >= '%s'
                             and datestop < '%s'
@@ -482,7 +482,7 @@ def cmp_timelines(opt, dbfile ):
     ts.writelines(test_lines)
     ts.close()
 
-    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=opt.verbose)    
+    acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=opt.verbose)    
     acadb_timelines = acadb.fetchall("""select * from timelines
                             where datestart >= '%s'
                             and datestop < '%s'
@@ -567,7 +567,7 @@ def run_model(opt, dbfile):
 
 def test_get_built_load():
 
-    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=False)
 
     good = [dict(load={'datestart': '2010:052:01:59:26.450',
                          'datestop': '2010:052:12:20:06.101',
@@ -592,7 +592,7 @@ def test_get_built_load():
 
 def test_get_processing():
 
-    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=False)
  
     good = [dict(built_load={'file': 'C044_2301.sum',
                                'first_cmd_time': '2010:052:01:59:26.450',
@@ -623,7 +623,7 @@ def test_get_processing():
 
 def test_weeks_for_load():
 
-    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', numpy=True, verbose=False)
+    dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=False)
 
     good = [dict(load= {'datestart': '2010:052:01:59:26.450',
                           'datestop': '2010:052:12:20:06.101',
@@ -645,7 +645,7 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
-def test_nsm_2010(outdir='t/nsm_2010'):
+def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska='/proj/sot/ska'):
         
     err.write("Running nsm 2010 simulation \n" )
     # Simulate timelines and cmd_states around day 150 NSM
@@ -698,14 +698,14 @@ def test_nsm_2010(outdir='t/nsm_2010'):
         dtime = ifot_time - int_time
         if dtime.hours >= 0 and dtime.hours < step:
             print "Performing interrupt"
-            bash_shell("/proj/sot/ska/share/cmd_states/add_nonload_cmds.py " 
+            bash_shell("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
                        + " --dbi=sqlite --cmd-set nsm "
                        + " --date '%s'" % DateTime(int_time).date
                        + " --interrupt "
                        + " --archive-file %s/nonload_cmds_archive.py " % outdir
                        + " --server %s/test.db3" % outdir )
 
-            bash_shell("/proj/sot/ska/share/cmd_states/add_nonload_cmds.py " 
+            bash_shell("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
                        + " --dbi=sqlite --cmd-set scs107 "
                        + " --date '%s'" % DateTime(int_time).date
                        + " --interrupt "
