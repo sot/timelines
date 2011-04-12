@@ -14,6 +14,9 @@ import Ska.Table
 from Ska.DBI import DBI
 from Chandra.Time import DateTime
 
+import fix_tl_processing
+import fix_load_segments
+
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 MP_DIR = '/data/mpcrit1/mplogs/'
@@ -30,9 +33,9 @@ def get_options():
                       default='db_base.db3',
                       help="DBI server (<filename>|sybase)")
     parser.add_option("--user",
-                      help="sybase user, will use Ska.DBI default by default")
+                      help="sybase user (default=Ska.DBI default)")
     parser.add_option("--database",
-                      help="sybase database, will use Ska.DBI default by default")
+                      help="sybase database (default=Ska.DBI default)")
     parser.add_option("--dryrun",
                       action='store_true',
                       help="Do not perform real database updates")
@@ -271,10 +274,6 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
             timelines.append(run_timeline)
 
     timelines = sorted(timelines, key=lambda k: k['datestart'])
-    for timeline in timelines:
-        timeline['id'] = int(DateTime(timeline['datestart']).secs)
-        timeline['fixed_by_hand'] = 0
-
     # get existing entries
     db_timelines = dbh.fetchall("""select * from timelines 
                                    where datestop >= '%s'
@@ -319,20 +318,23 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     if len(defunct_tl):
         for id in defunct_tl.id:
             clear_timeline( id, dbh=dbh, dryrun=dryrun )
-            
         
     # Insert new timelines[i_diff:] 
+    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
+
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
                   (i_diff, len(timelines)+1))
     for timeline in timelines[i_diff:]:
         log.debug('TIMELINES DEBUG: inserting timeline:')
-        insert_string = "\t %s %s %s %d" % ( timeline['dir'], 
+        insert_string = "\t %s %s %s" % ( timeline['dir'], 
                                              timeline['datestart'], timeline['datestop'], 
-                                             timeline['id'] )
+                                             )
         log.debug(insert_string)
+        timeline['id'] = max_id + 1
+        timeline['fixed_by_hand'] = 0
+        max_id = timeline['id']
         if not dryrun:
             dbh.insert(timeline, 'timelines')
-
 
 
 def rdb_to_db_schema( orig_ifot_loads ):
@@ -346,7 +348,7 @@ def rdb_to_db_schema( orig_ifot_loads ):
     loads = []
     for orig_load in orig_ifot_loads:
         starttime = DateTime(orig_load['TStart (GMT)'])
-        load = ( int(starttime.secs),
+        load = ( 
                  orig_load['LOADSEG.NAME'],
                  starttime.mxDateTime.year,
                  orig_load['TStart (GMT)'],
@@ -355,7 +357,7 @@ def rdb_to_db_schema( orig_ifot_loads ):
                  0,
                  )
         loads.append(load)
-    names = ('id','load_segment','year','datestart','datestop','load_scs','fixed_by_hand')
+    names = ('load_segment','year','datestart','datestop','load_scs','fixed_by_hand')
     load_recs = np.rec.fromrecords( loads, names=names)
     return load_recs
 
@@ -389,7 +391,7 @@ def check_load_overlap( loads ):
                             loads[load_idx+1]['load_segment'],
                             max_sep_hours ))
     # any SCS overlap
-    for scs in (128,129,130):
+    for scs in (128, 129, 130, 131, 132, 133):
         scs_loads = loads[ loads['load_scs'] == scs ]
         scs_times = ( DateTime(scs_loads[1:]['datestart']).secs 
                       - DateTime(scs_loads[:-1]['datestop']).secs)
@@ -507,6 +509,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     else:
         # Find mismatches:
         match_cols = [x[0] for x in db_loads.dtype.descr if 'f' not in x[1]]
+        match_cols.remove('id')
         # use min( ... ) to only check through the range that is in both lists
         for i_diff in xrange(0, min( len(ifot_loads), len(db_loads) )):
             ifot_load = ifot_loads[i_diff]
@@ -543,13 +546,21 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     # Insert new loads[i_diff:] into load_segments
     log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
                   (i_diff, len(ifot_loads)+1))
+
+    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
+
     for load in ifot_loads[i_diff:]:
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'] )
         log.debug(insert_string)
+        
+        load_dict = dict(zip(load.dtype.names, load))
+        load_dict['id'] = max_id + 1;
+        max_id = load_dict['id']
         if not dryrun:
-            dbh.insert(load, 'load_segments', commit=True)
+            dbh.insert(load_dict, 'load_segments', commit=True)
+            
     return ifot_loads[i_diff:]
 
     
@@ -610,17 +621,10 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
 if __name__ == "__main__":
 
     (opt,args) = get_options()
-    try:
-        main(opt.loadseg_rdb_dir, dryrun=opt.dryrun, 
+    main(opt.loadseg_rdb_dir, dryrun=opt.dryrun, 
              test=opt.test, dbi=opt.dbi, server=opt.server,
              database=opt.database, user=opt.user,
              verbose=opt.verbose)
-    except Exception, msg:
-        if opt.traceback:
-            raise
-        else:
-            print "ERROR:", msg
-            sys.exit(1)
 
 
 

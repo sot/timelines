@@ -34,7 +34,7 @@ def main():
     syb = Ska.DBI.DBI(dbi='sybase', user='aca_read', server='sybase', database='aca',
                       numpy=False, verbose=opt.verbose)
 	
-	db = Ska.DBI.DBI(dbi='sqlite', server=opt.server, numpy=False, verbose=opt.verbose)
+    db = Ska.DBI.DBI(dbi='sqlite', server=opt.server, numpy=False, verbose=opt.verbose)
 
     for drop in ('VIEW timeline_loads', 'TABLE timelines', 'TABLE load_segments',
                  'TABLE cmd_fltpars', 'TABLE cmd_intpars', 'TABLE cmds',

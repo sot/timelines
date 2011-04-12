@@ -36,14 +36,13 @@ def repair(ifot_loads):
     match = ((ifot_loads.load_segment == 'CL110:1409') &
              (ifot_loads.year == 2003)) 
     if any(match):
-        cmd_date = '2003:110:14:07:09.439'
-        cmd_idx = int(DateTime(cmd_date).secs)
-        rec_tuple = ( cmd_idx, 'CL110:1404', 2003,
+        rec_tuple = ( 'CL110:1404', 2003,
                       '2003:110:14:07:09.439', '2003:112:00:00:31.542', 130, 1)
         # ifot_list except the bad one
         ifot_list = ifot_loads[match == False].tolist()
         ifot_list.append(rec_tuple)
-        ifot_list.sort(lambda x,y: cmp(x[0],y[0]))
+	    # sort by datestart in third field
+        ifot_list.sort(lambda x,y: cmp(x[2],y[2]))
         new_ifot = np.rec.fromrecords( ifot_list,
                                        dtype=ifot_loads.dtype,
                                        )
@@ -52,18 +51,17 @@ def repair(ifot_loads):
 
     # CL188:0402 is missing
     cmd_date = '2009:188:04:00:00.000'
-    cmd_idx = int(DateTime(cmd_date).secs)
 
     if ((ifot_loads[0].datestart <= cmd_date) and (ifot_loads[-1].datestart > cmd_date)):
         if np.flatnonzero((ifot_loads.load_segment == 'CL188:0402') &
                           (ifot_loads.year == 2009)):
             pass
         else:
-            rec_tuple = ( cmd_idx, 'CL188:0402', 2009,
+            rec_tuple = ( 'CL188:0402', 2009,
                          '2009:188:04:00:00.000', '2009:188:20:57:33.571', 129, 1)
             ifot_list = ifot_loads.tolist()
             ifot_list.append(rec_tuple)
-            ifot_list.sort(lambda x,y: cmp(x[0],y[0]))
+            ifot_list.sort(lambda x,y: cmp(x[2],y[2]))
             new_ifot = np.rec.fromrecords( ifot_list,
                                            dtype=ifot_loads.dtype,
                                            )
