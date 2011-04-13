@@ -5,9 +5,9 @@ load_segment varchar(10) not null,
 file varchar(15) not null,
 first_cmd_time varchar(22),
 last_cmd_time varchar(22),
-load_scs int,
+load_scs int not null,
 sumfile_modtime float not null,
-primary key (year, load_segment, file, sumfile_modtime)
+primary key (year, load_segment, file, load_scs, sumfile_modtime)
 );
 
 create table tl_processing

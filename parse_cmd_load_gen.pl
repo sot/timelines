@@ -42,6 +42,8 @@ GetOptions(\%opt,
 	   'dryrun!',
 	   'dbi=s',
 	   'server=s',
+           'database=s',
+           'user=s',
     );
 
 my $mp_dir = $opt{mp_dir};
@@ -60,24 +62,26 @@ if (-e $opt{touch_file}){
 }
 
 
-my $load_handle;
+my $load_arg;
 if ($opt{dbi} eq 'sybase'){
-    if ($opt{dryrun}){
-	$load_handle = sql_connect('sybase-aca-aca_read');
-    }
-    else{
-	$load_handle = sql_connect('sybase-aca-aca_ops');
-    }
+    my $user = defined $opt{user} ? $opt{user}
+              :      $opt{dryrun} ? 'aca_read' 
+                                  : 'aca_ops';
+    my $database = defined $opt{database}      ? $opt{database} 
+                 : defined $ENV{SKA_DATABASE}  ? $ENV{SKA_DATABASE}
+                                               : 'aca';
+    $load_arg = sprintf("%s-%s-%s", 'sybase', $database, $user);
 }
 else{
-    $load_handle = sql_connect({ database  => $opt{server},
-				 type => 'array',
-				 raise_error => 1,  
-				 print_error => 1,  
-				 DBI_module => 'dbi:SQLite', 
-			       });
+    $load_arg = { database  => $opt{server},
+                     type => 'array',
+                     raise_error => 1,  
+                     print_error => 1,  
+                     DBI_module => 'dbi:SQLite', 
+                };
 }
 
+my $load_handle = sql_connect($load_arg);
 
 my @files;
 
@@ -155,6 +159,7 @@ sub update_for_file{
 	    my $delete = qq( delete from tl_built_loads where year = $load_ref->{year} 
 			     and load_segment = "$load_ref->{load_segment}" 
 			     and file = "$filename"
+                             and load_scs = "$load_ref->{load_scs}"
 			     and sumfile_modtime = $week->{sumfile_modtime} );
 	    sql_do( $load_handle, $delete);
 	    sql_insert_hash( $load_handle, 'tl_built_loads', $load_ref );
@@ -231,7 +236,7 @@ sub parse_clgps {
     # assume this isn't a replan
     my %week = ( replan => 0 );
 		 
-    my @loads;
+    my @rawloads;
     my $lines = io($gps)->slurp;
 
     # split the file into paragraphs based on the asterisk separator lines
@@ -289,7 +294,7 @@ sub parse_clgps {
 	    if ( $piece =~ /Load\sname:\s+(CL\d{3}:\d{4})/){
 		$load{load_segment} = $1;
 	    }
-	    if ( $piece =~ /SCS\sNumber:\s+(\d{3})/){
+	    if ( $piece =~ /SCS\sNumber:\s+(\d{3}(\/\d{3})?)/){
 		$load{load_scs} = $1;
 	    }
 	    if ( $piece =~ /First\sCommand\sTime:\s+(\S+)/ ){
@@ -301,10 +306,25 @@ sub parse_clgps {
 	    if ( $load{first_cmd_time} =~ /^(\d{4})/ ){
 		$load{year} = $1;
 	    }
-	    push @loads, \%load;
+	    push @rawloads, \%load;
 	}
 
 
+    }
+
+    my @loads;
+    for my $load (@rawloads){
+        if ($load->{load_scs} =~ /^(\d{3})\/(\d{3})$/){
+            my $vehicle = $1;
+            my $observing = $2;
+            $load->{load_scs} = $vehicle;
+            push @loads, {%$load};
+            $load->{load_scs} = $observing;
+            push @loads, {%$load};
+        }
+        else{
+            push @loads, $load;
+        }
     }
 
     # I've put the processing information for the week into a hash
