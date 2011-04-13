@@ -1,0 +1,15 @@
+>>> Running Momentum Unload Check - vehicle/VR276_0906.backstop
+
+Searching for continuity prior to 2010276.095511417
+ATTITUDE [ 0.164358  0.667801  0.287736  0.666510 ] at 2010276.035259913
+
+[PASS] Continuity Search
+
+-------------------------------------------------------------------------------
+1 EXTENDED UNLOAD PD: 2010277.094502000 2010277.105702000
+
+[PASS] This Period
+-------------------------------------------------------------------------------
+
+[PASS] OVERALL RESULT
+

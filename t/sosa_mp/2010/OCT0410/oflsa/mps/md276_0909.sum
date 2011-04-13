@@ -1,0 +1,130 @@
+                          MPS MDOT Processing Summary
+                            MPS MDOT VERSION = 11.00
+                             2010:270:20:56:14.000
+
+
+
+ACTIVITY OVERLAP(S) FOUND AT INTERVAL:		316
+
+ACTIVITY OVERLAP(S) FOUND AT INTERVAL:		701
+
+*** DOT TRANSLATION RESULTS *** 
+                   
+STATEMENTS TRANSLATED                    
+TYPE      NUMBER                    
+----------------                    
+TEXT           7                    
+ACIS         167                    
+ATS                    
+  MANVR       23                    
+  NUDGE        0                    
+  ACQ         23                    
+  EDITSTAR     0                    
+  FIDSEL      15                    
+  MOMMGT       0                    
+  COMSET      18                    
+  SIWARM       0                    
+  OBSID       23                    
+  SIM         27                    
+  OTG          6                    
+  DTHR         4                    
+  TLM         14                    
+  SHD          0                    
+  HRCDOOR      1                    
+  HRCDET       1                    
+  HRCOBS       1                    
+  Other        8                    
+----------------                   
+  Total      338
+
+*** DOT CONSTRAINT CHECKING RESULTS *** 
+ 		   
+NUMBER OF INTERVALS CHECKED        :            899                    
+NUMBER OF POINTING VIOLATIONS FOUND:              0                    
+NUMBER OF POWER    VIOLATIONS FOUND:              0                    
+NUMBER OF MOMENTUM VIOLATIONS FOUND:              1                    
+NUMBER OF SIM      VIOLATIONS FOUND:              0                    
+NUMBER OF ROLL     VIOLATIONS FOUND:              0
+ACIS Tables Configuration File: /ehs/ofls/build/bin/mps/output/me30275_267/ACIS_10_09_24_4DDT.CFG
+ACIS Tables Data File         : /ehs/ofls/build/bin/mps/output/me30275_267/ACIS_10_09_24_4DDT.DAT
+Characteristics File          : /ehs/ofls/build/bin/mps/output/me30275_267/CHARACTERIS_12JUN08
+Clock Correlation File        : /ehs/ofls/build/bin/mps/output/me30275_267/CLKHST_1156
+Contraints File               : /ehs/ofls/build/bin/mps/output/me30275_267/CONSTRAINTS_05FEB09
+DOT Continuity File           : /ehs/ofls/build/bin/mps/output/m270:0409/md270:0408.dot
+DOT Syntax Rule File          : /ehs/ofls/build/bin/system/syntax/dot_syntax_rules.dat
+Ephemeris File                : /ehs/ofls/build/bin/mps/output/me30275_267/DE10243.EPH
+HRC Modes File                : /ehs/ofls/build/bin/mps/output/me30275_267/HRCMODE_100830.ODE
+MPS Directory File            : /ehs/ofls/build/bin/mps/output/mps_dir_file
+Orbit Events File             : /ehs/ofls/build/bin/mps/output/me30275_267/DO10243
+ORER Syntax Rule File         : /ehs/ofls/build/bin/system/syntax/or_synrule.syn
+Schedule File                 : /ehs/ofls/build/bin/mps/output/m276:0910/ms276:0910.sch
+Visibility File               : /ehs/ofls/build/bin/mps/output/m276:0910/mv276:0910.vis
+SLP File                      : /ehs/ofls/build/bin/mps/output/me30275_267/DE200_1980_2020_LE.SLP
+
+Output Directory              : /ehs/ofls/build/bin/mps/output/m276:0910/
+DOT File                      : /ehs/ofls/build/bin/mps/output/m276:0910/md276:0909.dot
+
+
+USER-SPECIFIED START TIME (GMT):         2010:276:09:58:11.417                         
+USER-SPECIFIED END TIME (GMT)  :         2010:284:02:53:34.456                         
+ADJUSTED START TIME (GMT)      :         2010:276:09:58:11.417                         
+ADJUSTED END TIME (GMT)        :         2010:284:02:53:34.456                         
+USER-SPECIFIED INTERVAL (SEC)  :         600.000000
+                         
+NUMBER OF INTERVALS TO BE CHECKED:              1110
+
+ACTIVITY OVERLAP(S) FOUND AT INTERVAL:		184
+
+ACTIVITY OVERLAP(S) FOUND AT INTERVAL:		562
+
+ACTIVITY OVERLAP(S) FOUND AT INTERVAL:		947
+
+*** DOT TRANSLATION RESULTS *** 
+                   
+STATEMENTS TRANSLATED                    
+TYPE      NUMBER                    
+----------------                    
+TEXT           5                    
+ACIS         220                    
+ATS                    
+  MANVR       33                    
+  NUDGE        0                    
+  ACQ         22                    
+  EDITSTAR     0                    
+  FIDSEL      18                    
+  MOMMGT       0                    
+  COMSET      23                    
+  SIWARM       0                    
+  OBSID       36                    
+  SIM         31                    
+  OTG          2                    
+  DTHR         2                    
+  TLM          4                    
+  SHD          0                    
+  HRCDOOR      1                    
+  HRCDET       1                    
+  HRCOBS       1                    
+  Other       12                    
+----------------                   
+  Total      411
+
+*** DOT CONSTRAINT CHECKING RESULTS *** 
+ 		   
+NUMBER OF INTERVALS CHECKED        :           1110                    
+NUMBER OF POINTING VIOLATIONS FOUND:              0                    
+NUMBER OF POWER    VIOLATIONS FOUND:              0                    
+NUMBER OF MOMENTUM VIOLATIONS FOUND:              2                    
+NUMBER OF SIM      VIOLATIONS FOUND:              0                    
+NUMBER OF ROLL     VIOLATIONS FOUND:              0
+
+The maximum error severity for this run is = 3
+
+
+*****************************MDOT PROCESSING COMPLETE!************************
+
+
+
+ Number of Informational messages generated = 2
+ Number of Warning messages generated       = 0
+ Number of Critical messages generated      = 9
+ Number of Fatal messages generated         = 0

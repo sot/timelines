@@ -296,17 +296,17 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
     """
 
     parse_cmd = os.path.join('./parse_cmd_load_gen.pl')
-    bash( '%s --touch_file %s --mp_dir %s --server %s' %
-                ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
-
+    parse_cmd_str = ( '%s --touch_file %s --mp_dir %s --server %s' %
+                      ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
+    #err.write(parse_cmd_str + "\n")
+    bash(parse_cmd_str)
     #    update_load_seg_db.main(load_seg_dir, test=True, server=dbfilename,
     #                     verbose=True, dryrun=False)
     update_load_seg = os.path.join('./update_load_seg_db.py')
-    load_seg_output = bash( "%s --test --server %s --loadseg_rdb_dir '%s' --verbose" %
+    load_seg_cmd_str = ( "%s --test --server %s --loadseg_rdb_dir '%s'" %
                             ( update_load_seg, dbfilename, load_seg_dir ))
-        
-    
-        
+    #err.write(load_seg_cmd_str + "\n")
+    load_seg_output = bash(load_seg_cmd_str)
 
     # update_cmd_states backs up to the first NPNT before the given tstart...
     # backing up doesn't work for this, because we don't have timelines to make 
@@ -341,10 +341,11 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
         nonload_cmd_file = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'nonload_cmds_archive.py')
     bash("%s --server %s " % (nonload_cmd_file, dbfilename ))
 
-#    print "Updating States from %s" % cmd_state_datestart
     update_cmd_states = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'update_cmd_states.py')
-    bash( "%s --datestart '%s' --server %s" %
-                             (update_cmd_states, cmd_state_datestart, dbfilename))
+    #err.write("Running %s --datestart '%s' --server %s --mp_dir %s \n" %
+    #          (update_cmd_states, cmd_state_datestart, dbfilename, mp_dir))              
+    bash( "%s --datestart '%s' --server %s --mp_dir %s" %
+          (update_cmd_states, cmd_state_datestart, dbfilename, mp_dir))
 
     return dbfilename
 
@@ -396,6 +397,37 @@ def text_states( load_rdb, dbfile ):
                             order by datestart""" % (datestart, datestop ))
     test_lines = string_states( test_states )
     return test_lines
+def text_cmds( load_rdb, dbfile):
+    loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+    datestart = loads[0]['TStart (GMT)']
+    datestop = loads[-1]['TStop (GMT)']
+
+    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=False )
+    timelines = db.fetchall("""select * from timelines
+                                    where datestart >= '%s'
+                                    and datestop <= '%s'
+                                    order by datestart""" % (datestart, datestop))
+    cmds = db.fetchall("""select * from cmds
+                            where date >= '%s'
+                            and date <= '%s'
+                            and timeline_id is NULL
+                            order by date""" % (datestart, datestop ))
+    for tl in timelines:
+        tl_cmds = db.fetchall("""select * from cmds
+                                 where timeline_id = %d
+                                 and date >= '%s'
+                                 and date <= '%s'
+                                 order by date""" % (tl['id'], tl['datestart'], tl['datestop']))
+        cmds.extend(tl_cmds)
+    cmds = sorted(cmds, key=lambda x: x['date'])
+    test_lines = ["id\ttimeline_id\tdate\tcmd\ttlmsid\tmsid\tscs\n"]
+    for cmd in cmds:
+        test_lines.append("%d\t%s\t%s\t%s\t%s\t%s\t%s\n" %
+                          (cmd['id'], cmd['timeline_id'], cmd['date'],
+                          cmd['cmd'], cmd['tlmsid'], cmd['msid'], cmd['scs']))
+    return test_lines
+
+    
 
 def cmp_states(opt, dbfile ):
     """
@@ -718,58 +750,145 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska='/proj/sot/ska'):
         populate_states( outdir, load_dir, mp_dir, dbfilename,
                          "%s/nonload_cmds_archive.py" % outdir)
 
-        # write out the timelines and states after the tasks are complete
-#        bash_shell("""sqlite3 %s/test.db3 "select * from timelines" > %s/%s_timelines.txt """ % (
-#            outdir, outdir, DateTime(ifot_time).date))
-        dbh = Ska.DBI.DBI(dbi='sqlite',server='%s/test.db3' % outdir)
-        timelines = dbh.fetchall("select * from timelines")
-        test_timelines = string_timelines(timelines)
-        tl = open( os.path.join( outdir, '%s_test_timelines.dat' % DateTime(ifot_time).date), 'w')
-        tl.writelines(test_timelines)
-        tl.close()
-        # retrieve fiducial timelines
-        ft_file = "t/%s_fid_timelines.dat" % DateTime(ifot_time).date
-        if os.path.exists(ft_file):
-            fl = open(ft_file, 'r')
-            fiducial_timelines = fl.readlines()
-        else:
-            fiducial_timelines = ''
-        # compare
-        differ = difflib.context_diff( fiducial_timelines, test_timelines )
-        difflines = [ line for line in differ ]
-        if len(difflines):
-            diff_out = open(os.path.join(outdir, 'diff_timelines.html'), 'w')
-            htmldiff = difflib.HtmlDiff()
-            htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
-            diff = htmldiff.make_file( fiducial_timelines, test_timelines, context=True )
-            diff_out.writelines(diff)
-            err.write("Diff in dir %s for NSM timelines for %s\n" % (outdir,
-                                                                 DateTime(ifot_time).date ))
-        assert len(difflines) == 0 
+        prefix = DateTime(ifot_time).date + '_'
+        text_files = output_text_files( load_rdb, dbfilename, outdir, prefix=prefix)
+        for type in ('timelines', 'states'):
+            f = partial( text_compare, text_files[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
+            f.description = "%s doesn't match %s for %s" % (text_files[type],
+                                                            't/%sfid_%s.dat' % (prefix, type), type)
+            yield(f,)
 
-        test_states = text_states( load_rdb, dbfilename )
-        ts = open( os.path.join( outdir, '%s_test_states.dat' % DateTime(ifot_time).date), 'w')
-        ts.writelines(test_states)
-        ts.close()
-        # retrieve fiducial states
-        fs_file = "t/%s_fid_states.dat" % DateTime(ifot_time).date
-        if os.path.exists(fs_file):
-            fs = open(fs_file, 'r')
-            fiducial_states = fs.readlines()
-        else:
-            fiducial_states = ''
-        # compare
-        differ = difflib.context_diff( fiducial_states, test_states )
-        difflines = [ line for line in differ ]
-        if len(difflines):
-            diff_out = open(os.path.join(outdir, 'diff_states.html'), 'w')
-            htmldiff = difflib.HtmlDiff()
-            htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
-            diff = htmldiff.make_file( fiducial_states, test_states, context=True )
-            diff_out.writelines(diff)
-            err.write("Diff in dir %s for NSM states for %s\n" % (outdir,
-                                                                 DateTime(ifot_time).date ))
-        assert len(difflines) == 0 
+    try:
+        clean_states(outdir)
+    except OSError:
+        err.write("Passed all tests, but failed to delete dir %s\n" % outdir)
+
+def output_text_files( load_rdb, dbfilename, outdir, prefix=''):
+    
+    dbh = Ska.DBI.DBI(dbi='sqlite',server=dbfilename)
+    timelines = dbh.fetchall("select * from timelines")
+    test_timelines = string_timelines(timelines)
+    tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
+    tl = open( tfile, 'w')
+    tl.writelines(test_timelines)
+    tl.close()
+    test_states = text_states( load_rdb, dbfilename )
+    sfile = os.path.join( outdir, prefix+'test_states.dat')
+    ts = open( sfile, 'w')
+    ts.writelines(test_states)
+    ts.close()
+    test_cmds = text_cmds( load_rdb, dbfilename )
+    cfile =  os.path.join( outdir, prefix+'test_cmds.dat')
+    tc = open( cfile, 'w')
+    tc.writelines(test_cmds)
+    tc.close()
+    return { 'timelines': tfile,
+             'states': sfile,
+             'cmds': cfile }
+
+
+def text_compare( testfile, fidfile, outdir, label):
+    err.write("Comparing %s and %s \n" % (testfile, fidfile))
+
+    # test lines
+    test_lines = open(testfile, 'r').readlines() 
+
+    # retrieve fiducial data
+    if os.path.exists(fidfile):
+        fiducial_lines = open(fidfile, 'r').readlines()
+    else:
+        fiducial_lines = ''
+
+    
+#    # compare
+    differ = difflib.context_diff( fiducial_lines, test_lines )
+    difflines = [ line for line in differ ]
+
+    if len(difflines):
+        err.write("Error on %s, diff in %s \n" % (testfile,
+                                                  os.path.join(outdir, 'diff_%s.html' % label)))
+        diff_out = open(os.path.join(outdir, 'diff_%s.html' % label), 'w')
+        htmldiff = difflib.HtmlDiff()
+        htmldiff._styles = htmldiff._styles.replace('Courier', 'monospace')
+        diff = htmldiff.make_file( fiducial_lines, test_lines, context=True )
+        diff_out.writelines(diff)
+        assert False
+        
+
+
+def test_sosa(outdir='t/sosa_new_plus_cmds', cmd_state_ska=os.environ['SKA']):
+        
+    err.write("Running sosa 2010 simulation \n" )
+    # Simulate timelines and cmd_states around day 150 NSM
+    dbfilename = os.path.join(outdir, 'test.db3')
+    if os.path.exists(outdir):
+        clean_states(outdir)
+    os.makedirs(outdir)
+
+    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
+    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    load_dir = os.path.join(outdir, 'loads')
+    os.makedirs(load_dir)
+    shutil.copy('t/sosa.rdb', load_dir)
+    load_rdb = os.path.join(load_dir, 'sosa.rdb')
+
+    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
+    mp_dir = os.path.join(outdir, 'mp')
+    
+    # set up rest of testing components around that load_segment file
+    if not os.path.exists(dbfilename):
+        make_table( dbfilename )
+
+    populate_states( outdir, load_dir, mp_dir, dbfilename,
+                     "%s/nonload_cmds_archive.py" % outdir)
+
+    
+    # write out the timelines, states, and cmds 
+    prefix = 'sosa_pre_'
+    test_text = output_text_files(load_rdb, dbfilename, outdir, prefix=prefix)
+    for type in ('timelines', 'states', 'cmds'):
+        f = partial( text_compare, test_text[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
+        f.description = "%s doesn't match %s for %s" % (test_text[type],
+                                                        't/%sfid_%s.dat' % (prefix, type), type)
+        yield(f,)
+
+    shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
+    
+
+    # a time for the interrupt (chosen in the middle of a segment)
+    int_time = '2010:278:20:00:00.000'
+
+    # run the interrupt commanding before running the rest of the commands
+    # if the current time is the first simulated cron pass after the
+    # actual insertion of the interrupt commands
+    #print "Performing SCS107 interrupt"
+    interrupt_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+               + " --dbi=sqlite --cmd-set scs107 "
+               + " --date '%s'" % DateTime(int_time).date
+               + " --interrupt_observing "
+               + " --archive-file %s/nonload_cmds_archive.py " % outdir
+               + " --server %s/test.db3" % outdir )
+    #err.write(interrupt_cmd + "\n")
+    bash_shell(interrupt_cmd)
+
+    # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
+    # update_load_seg_db.py, update_cmd_states.py
+    populate_states( outdir, load_dir, mp_dir, dbfilename,
+                     "%s/nonload_cmds_archive.py" % outdir)
+    
+    # write out the timelines and states after the tasks are complete
+    prefix = 'sosa_post_'
+    test_text = output_text_files(load_rdb, dbfilename, outdir, prefix=prefix)
+    for type in ('timelines', 'states', 'cmds'):
+        f = partial( text_compare, test_text[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
+        f.description = "%s doesn't match %s for %s" % (test_text[type],
+                                                        't/%sfid_%s.dat' % (prefix, type), type)
+        yield(f,)
+        
+    shutil.copyfile( dbfilename, os.path.join(outdir, 'db_post_interrupt.db3'))
+
 
     # if we didn't fail an assert, remove the testing directory
     try:

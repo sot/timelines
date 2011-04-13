@@ -1,0 +1,17 @@
+! FOT request for adjusting the trigger-level threshold during the
+! pathfinder observation of the Crab pulsar, ObsID 13121
+!
+! The trigger threshold is adjusted down by 5 every 200 seconds from
+! the start of the observation. The SI_MODE will start it at 65.
+!
+! Times below must be set based on observation start time.
+!
+/CMD,2LLDIATH,2LLDIAT1=60,TIME=2010:279:04:48:31.629
+/CMD,2LLDIATH,2LLDIAT1=55,TIME=2010:279:04:51:51.629
+/CMD,2LLDIATH,2LLDIAT1=50,TIME=2010:279:04:55:11.629
+/CMD,2LLDIATH,2LLDIAT1=45,TIME=2010:279:04:58:31.629
+/CMD,2LLDIATH,2LLDIAT1=40,TIME=2010:279:05:01:51.629
+/CMD,2LLDIATH,2LLDIAT1=35,TIME=2010:279:05:05:11.629
+/CMD,2LLDIATH,2LLDIAT1=30,TIME=2010:279:05:08:31.629
+/CMD,2LLDIATH,2LLDIAT1=25,TIME=2010:279:05:11:51.629
+/CMD,2LLDIATH,2LLDIAT1=20,TIME=2010:279:05:15:11.629

@@ -1,0 +1,7 @@
+>>> Running IU Mode Commands Check - ./CR276_0906.backstop
+
+
+Total IU Mode select commands present: 23
+Total unique transmitter turn-on cmds present: 23
+
+[PASS] OVERALL RESULT

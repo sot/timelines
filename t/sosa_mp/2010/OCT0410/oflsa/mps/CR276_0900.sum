@@ -1,0 +1,99 @@
+                  Command Report Generation Processing Summary
+                              CRPT VERSION = 11.00
+                             2010:270:21:55:53.000
+
+
+
+*********************************INPUT FILES******************************
+
+crpt input directory path =	/ehs/ofls/build/bin/cm/output/C276:0900/
+crpt output directory path =	/ehs/ofls/build/bin/cm/output/C276:0900/
+continuity input directory path = 	/ehs/ofls/build/bin/cm/output/C270:0407/
+orbit events file =		/ehs/ofls/build/bin/cm/output/C276:0900/DO10243
+comment files =			/ehs/ofls/build/bin/cm/output/C276:0900/C276:0900.cmt
+command load output file =	/ehs/ofls/build/bin/cm/output/C276:0900/C276:0900
+MPS communication uplink file =	/ehs/ofls/build/bin/mps/output/m276:0910/mc276:0909.upl
+configuration reference file = 	/ehs/ofls/build/bin/system/benchmark/cm/cnfg_ref_TV.dat
+CRPT RUN NAME =			CR276:0900
+orbit event mnemonics = 	EASCNCR
+orbit event mnemonics = 	PENTRY
+orbit event mnemonics = 	PEXIT
+orbit event mnemonics = 	EONIGHT
+orbit event mnemonics = 	EODAY
+Planning period start time = 2010:276:09:55:11.417
+Planning period stop time = 2010:284:02:53:34.456
+*********************************INPUT VALUES******************************
+
+mode =			BATCH
+orb_event_flag =	1
+dsn_sched_flag  =	1
+expand_rts_flag  =	1
+debug_level  =		0
+report_flags[0] =	1
+report_flags[1] =	1
+report_flags[2] =	1
+report_flags[3] =	1
+ats image file  =	1
+rts image flag  =	1
+cpe image flag  =	1
+obc image flag  =	1
+continuity flag  =	1
+DSN contact start time pad  =	0.000000
+
+********************* Reports Generated ***********************
+
+CRITICAL COMMAND REPORT
+--------------------------------------
+
+  PROCESSING TIME SPAN:
+    START TIME: 2010:276:09:55:11.417
+    STOP TIME:  2010:284:02:53:34.456
+  INPUT FILES:
+    PLANNING PERIOD BCF = /ehs/ofls/build/bin/cm/output/C276:0900/C276:0900.bcf
+  OUTPUT FILES:
+    CRITICAL COMMAND REPORT = /ehs/ofls/build/bin/cm/output/C276:0900/CR276:0900.ccc
+
+COMMAND TIMELINE REPORT
+--------------------------------------
+
+  INPUT FILES:
+    ORBIT EVENTS FILE:  
+      /ehs/ofls/build/bin/cm/output/C276:0900/DO10243
+    DSN SCHEDULE FILE:  
+      ''
+    PLANNING PERIOD BCF FILE:  
+      /ehs/ofls/build/bin/cm/output/C276:0900/C276:0900.bcf
+  PROCESSING TIME SPAN:
+    START TIME:	2010:276:09:55:11.417  
+    STOP TIME:	2010:284:02:53:34.456  
+  REPORT ORBIT EVENTS:	TRUE
+  REPORT DSN SCHEDULE:	TRUE
+  EXPAND RTS's:		TRUE
+
+UPLINK REPORT
+--------------------------------------
+
+  INPUT FILES:
+    MPS COMMUNICATIONS UPLINK FILE:  
+      /ehs/ofls/build/bin/mps/output/m276:0910/mc276:0909.upl
+    AXAF CHARACTERISTICS FILE:  
+      /ehs/ofls/build/bin/cm/output/C276:0900/CHARACTERIS_12JUN08
+    PLANNING PERIOD SCS USAGE FILE:  
+      /ehs/ofls/build/bin/cm/output/C276:0900/C276:0900.scs
+  OUTPUT FILES:
+    UPLINK SCHEDULE REPORT =   
+      /ehs/ofls/build/bin/cm/output/C276:0900/CR276:0900.upl
+
+*********************  MESSAGE SEVERITY SUMMARY ********************************
+
+
+THE MAXIMUM SEVERITY FOR THE CURRENT RUN  = NO ERRORS OCCURED
+
+Number of INFORMATIONAL Errors = 0
+Number of WARNING       Errors = 0
+Number of CRITICAL      Errors = 0
+Number of FATAL         Errors = 0
+
+
+
+TOTAL NUMBER OF ERRORS FOR THE CURRENT RUN =  0

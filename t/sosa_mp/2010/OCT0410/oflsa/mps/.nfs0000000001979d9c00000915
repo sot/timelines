@@ -1,0 +1,297 @@
+                   Command Load Generation Processing Summary
+                              CMAN VERSION = 11.00
+                             2010:336:18:23:22.000
+
+
+
+
+***********************************INITIALIZATION VALUES************************
+
+CMAN INIT FILE       = /ehs/ofls/build/bin/cm/init/cman_init.nml
+
+CM_WR_ACIS_TREP      = 1
+DEBUG_LEVEL          = 0
+GEN_RPTS_FLAG        = 1
+IP_FILE_TOGGLE       = 0
+USE_CONTINUITY       = 0
+CURRENT_RUN_TYPE     = 0
+ABS_LOAD_BREAKS[000] = ''
+ACIS_TBL_FILE        = ''
+ATS_MODE             = ''
+AXAF_CHAR_FILE       = ''
+AXAF_CONST_FILE      = ''
+CDB_VERSION_FLAG     = ''
+CLOCK_CORR_FILE      = ''
+CM_OUTPUT_DIR        = /ehs/ofls/build/bin/cm/output/
+CMD_SEQ_PATH         = ''
+CONTINUITY_DIR       = /ehs/ofls/build/bin/cm/output/C332:2004/
+DSN_SCHED_FILE 1     = ''
+DSN_SCHED_FILE 2     = ''
+FOT_DIRPATH          = /ehs/ofls/build/bin/user/mps/ops/fot_rqsts/
+IP_DOT_FILE          = ''
+IP_ODE_LST_FILE      = ''
+INPUT_REQ_FILES[00]  = ''
+LOAD_FIXED_DUR       = 001:10:00:00.000
+LOAD_MIN_DUR         = 000:02:00:00.000
+MPS_COMM_UPLINK_FILE = /ehs/ofls/build/bin/mps/output/m340:0205/mc340:0204.upl
+OFLS_DIRPATH         = /ehs/ofls/build/bin/user/cm/ofls_rqsts/
+ORB_EVENTS_FILE      = ''
+RTS_DEF_PATH         = ''
+START_TIME           = 2005:062:00:00:00.000
+STOP_TIME            = 2005:067:00:00:00.000
+
+
+
+***************************** CONTINUITY/REPLAN *********************
+
+Continuity: On
+Continuity Run Directory: /ehs/ofls/build/bin/cm/output/C270:0407/
+Continuity Run Planning Period Start Time: 2010:270:04:15:21.884
+Continuity Run Planning Period Stop Time:  2010:276:09:58:11.417
+
+*************** ON-BOARD ATS SCS USAGE FROM CONTINUITY ***************
+
+ATS SCS num: 128/131
+First command time: 2010:271:19:50:00.000
+Last command time:  2010:273:08:07:42.241
+Expire time:        2010:273:08:07:42.241
+
+ATS SCS num: 129/132
+First command time: 2010:273:11:00:00.000
+Last command time:  2010:274:22:15:01.285
+Expire time:        2010:274:22:15:01.285
+
+ATS SCS num: 130/133
+First command time: 2010:274:22:30:00.000
+Last command time:  2010:276:09:58:11.417
+Expire time:        2010:276:09:58:11.417
+
+
+***********************************PROCESSING VALUES******************
+
+Run Mode: Operational
+Run Type: Stored Command Loads
+Command Database Version: Baselined Version     Rev P007
+EXECUTION BEGIN TIME:2010:336:18:25:19.000
+PROCESSING TIME SPAN =
+	START TIME: 2010:276:09:55:11.417
+	STOP TIME:  2010:284:02:53:34.456
+
+***********************************ODE STATE**************************
+
+CHARACTERISTICS				= CHARACTERIS_12JUN08@Baselined Version     
+SPACECRAFT-CLOCK-CORRELATION		= CLKHST_1156@Baselined Version     
+DEFINITIVE-ORBIT-EVENTS			= DO10243@Baselined Version     
+RELATIVE-TIME-SEQUENCE			= @Baselined Version     
+COMMAND-SEQUENCE-DEF			= @Baselined Version     
+ACIS-TABLES				= ACIS_10_11_29_USNT@Baselined Version     
+MULTI-PART-COMMAND-DEFINITION-TABLES	= MULTIPART_CMD_V0680_1@Baselined Version     
+DSN-APPROVED-SCHEDULES			= /ehs/ofls/build/bin/user/mps/ops/DSN/Old_DSN/DSN276_284.mpA
+DSN-APPROVED-SCHEDULES			= NONE
+CONSTRAINTS				= CONSTRAINTS_05FEB09@Baselined Version     
+
+***********************************INPUT FILES**************************
+
+INPUT DOT FILE			= /ehs/ofls/build/bin/mps/output/m276:0910/md276:0909.dot
+FOT REQUEST DIRECTORY PATH	= /ehs/ofls/build/bin/user/mps/ops/fot_rqsts/
+INPUT FOT REQUEST FILE  1 	= MOMMGT_OCT0410.fot
+INPUT FOT REQUEST FILE  2 	= OBS13121_trigger.fot
+
+**********************************OUTPUT FILES**********************************
+
+TRANSLATION REPORT FILE NAME	= /ehs/ofls/build/bin/cm/output/C276:0901/C276:0901.trp
+Error Log FILE NAME		= /ehs/ofls/build/bin/cm/output/C276:0901/C276:0901.err
+Proccessing Summary Report	= /ehs/ofls/build/bin/cm/output/C276:0901/C276:0901.sum
+Timing Conflict Report		= /ehs/ofls/build/bin/cm/output/C276:0901/C276:0901.ctr
+
+***********************************CLOCK CORRELATION VALUES************************
+
+File name = /ehs/ofls/build/bin/cm/output/C276:0900/CLKHST_1156
+OBC Referece GMT = 2010:252:11:15:21.646
+OBC Reference counts: 3942656.000
+Clock rate:    0.25625
+Clock drift rate:    0.00000
+
+***********************************INPUT PROCESSING*******************************
+                                      -----COMBINED----- -----VEHICLE-----
+NUMBER OF ATS STATEMENTS PROCESSED		= 224             158
+NUMBER OF RTS STATEMENTS PROCESSED		= 0               0
+NUMBER OF /CMD STATEMENTS PROCESSED		= 928             741
+NUMBER OF RTSLOAD STATEMENTS PROCESSED		= 0               0
+NUMBER OF RTSEXPIRE STATEMENTS PROCESSED	= 0               0
+NUMBER OF TAB STATEMENTS PROCESSED		= 0               0
+NUMBER OF ACIS STATEMENTS PROCESSED		= 223             0
+NUMBER OF AON STATEMENTS PROCESSED		= 66              33
+NUMBER OF AOFF STATEMENTS PROCESSED		= 66              33
+NUMBER OF _IF STATEMENTS PROCESSED		= 6419            5418
+NUMBER OF _ELSE STATEMENTS PROCESSED		= 1948            1940
+NUMBER OF _ENDIF STATEMENTS PROCESSED		= 6419            5418
+NUMBER OF _SET STATEMENTS PROCESSED		= 4629            4340
+NUMBER OF _DELETE STATEMENTS PROCESSED		= 0               0
+NUMBER OF TEXT STATEMENTS PROCESSED		= 0               0
+NUMBER OF SIMPKT STATEMENTS PROCESSED		= 31              0
+NUMBER OF ACAPKT STATEMENTS PROCESSED		= 0               0
+NUMBER OF EIOPKT STATEMENTS PROCESSED		= 0               0
+    
+TOTAL NUMBER OF STATEMENTS              = 21046
+NUMBER OF VALID STATEMENTS              = 21046
+NUMBER OF INVALID STATEMENTS            = 0
+NUMBER OF STATEMENTS WITH SYNTAX ERRORS = 0
+TOTAL NUMBER OF SYNTAX ERRORS           = 0
+
+********************************** SCHEDULING FILE *****************************
+
+MPS COMM. UPLINK FILE           = /ehs/ofls/build/bin/mps/output/m340:0205/mc340:0204.upl
+ Time interval: 1985:001:00:00:00.000 - 1985:001:00:00:00.000
+
+*********************************LOAD BREAK SETTINGS****************************
+
+ Use Absolute Time Load Breaks was not selected
+ Use Fixed Load Duration was selected
+ Minimum Load Duration Time is:   000:02:00:00.000
+ Fixed Load Duration Time is:     001:10:00:00.000
+
+********************* ACTUAL PLANNING PERIOD START/STOP TIMES ******************
+
+ ACTUAL START TIME: 2010:276:09:55:11.417
+ ACTUAL STOP  TIME: 2010:284:02:53:34.456
+   (Planning period start time was not adjusted)
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL276:0901	Load type: ATS - A        
+	SCS Number:                  128/131          128
+	Number of critical Cmds:     47               42
+	Load Maximum Error Severity: 1                1
+	Number of Cmds in load:      458              293 (executable cmds)
+	Load By Time:                2010:276:09:54:11.417
+	Load After Time:             2010:274:11:54:11.417
+	First Command Time:          2010:276:09:55:11.417
+	Last Command Time:           2010:277:16:45:52.214
+	Number of Cmds to uplink:    2169             944 (uplinkable cmds)
+	Uplink Duration (seconds):   52.056
+   Load break was set to 2010:277:19:55:11.417
+      (Planning Period Start Time + Fixed Load Duration Time)
+
+No uplink opportunities selected for load with name: CL276:0901
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL277:2001	Load type: ATS - A        
+	SCS Number:                  129/132          129
+	Number of critical Cmds:     57               53
+	Load Maximum Error Severity: 1                1
+	Number of Cmds in load:      608              315 (executable cmds)
+	Load By Time:                2010:277:20:09:00.000
+	Load After Time:             2010:275:22:09:00.000
+	First Command Time:          2010:277:20:10:00.000
+	Last Command Time:           2010:279:05:48:00.991
+	Number of Cmds to uplink:    2050             814 (uplinkable cmds)
+	Uplink Duration (seconds):   49.2
+   Load break was set to 2010:279:05:55:11.417
+      (Previous Load Break Time + Fixed Load Duration Time)
+
+No uplink opportunities selected for load with name: CL277:2001
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL279:1101	Load type: ATS - A        
+	SCS Number:                  130/133          130
+	Number of critical Cmds:     52               47
+	Load Maximum Error Severity: 1                1
+	Number of Cmds in load:      450              298 (executable cmds)
+	Load By Time:                2010:279:10:59:00.000
+	Load After Time:             2010:277:12:59:00.000
+	First Command Time:          2010:279:11:00:00.000
+	Last Command Time:           2010:280:12:30:02.056
+	Number of Cmds to uplink:    1923             939 (uplinkable cmds)
+	Uplink Duration (seconds):   46.152
+   Load break was set to 2010:280:15:55:11.417
+      (Previous Load Break Time + Fixed Load Duration Time)
+
+No uplink opportunities selected for load with name: CL279:1101
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL280:1801	Load type: ATS - A        
+	SCS Number:                  128/131          128
+	Number of critical Cmds:     24               24
+	Load Maximum Error Severity: 0                0
+	Number of Cmds in load:      84               80 (executable cmds)
+	Load By Time:                2010:280:18:34:00.000
+	Load After Time:             2010:277:16:48:52.214
+	First Command Time:          2010:280:18:35:00.000
+	Last Command Time:           2010:281:21:00:02.056
+	Number of Cmds to uplink:    110              92 (uplinkable cmds)
+	Uplink Duration (seconds):   2.64
+   Load break was set to 2010:282:01:55:11.417
+      (Previous Load Break Time + Fixed Load Duration Time)
+
+No uplink opportunities selected for load with name: CL280:1801
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL282:0301	Load type: ATS - A        
+	SCS Number:                  129/132          129
+	Number of critical Cmds:     56               51
+	Load Maximum Error Severity: 1                1
+	Number of Cmds in load:      562              356 (executable cmds)
+	Load By Time:                2010:282:03:44:00.000
+	Load After Time:             2010:279:05:51:00.991
+	First Command Time:          2010:282:03:45:00.000
+	Last Command Time:           2010:283:11:39:58.410
+	Number of Cmds to uplink:    2571             1175 (uplinkable cmds)
+	Uplink Duration (seconds):   61.704
+   Load break was set to 2010:283:11:39:58.410
+     (Last cmd time before AON statement)
+
+No uplink opportunities selected for load with name: CL282:0301
+
+
+*********************************LOAD GENERATED********************************
+                                 ---COMBINED---   ---VEHICLE---
+Load name:         CL283:1201	Load type: ATS - A        
+	SCS Number:                  130/133          130
+	Number of critical Cmds:     14               14
+	Load Maximum Error Severity: 1                1
+	Number of Cmds in load:      83               60 (executable cmds)
+	Load By Time:                2010:283:12:21:25.053
+	Load After Time:             2010:280:12:33:02.056
+	First Command Time:          2010:283:12:22:25.053
+	Last Command Time:           2010:283:20:40:02.056
+	Number of Cmds to uplink:    345              145 (uplinkable cmds)
+	Uplink Duration (seconds):   8.28
+   Load break was set to 2010:284:21:55:11.417
+      (Previous Load Break Time + Fixed Load Duration Time)
+
+No uplink opportunities selected for load with name: CL283:1201
+
+
+*********************************CONFLICT TIMING REPORT TOTALS******************
+
+                                       ---COMBINED---   ---VEHICLE---
+  TOTAL COMMAND PAIR CONFLICTS:                 0               0
+  TOTAL COMMAND SPACING CONFLICTS:              0               0
+  TOTAL RCTU COMMAND SPACING CONFLICTS:         0               0
+  TOTAL COMMANDS PER SECOND EXCEEDED CONFLICTS: 0               0
+  TOTAL EIA SLICE COMMAND SPACING ERRORS:       0               0
+  TOTAL OBC SW COMMANDS PER MINOR CYCLE ERRORS: 24              0
+  TOTAL PACKET SPACING CONFLICTS:               0               0
+
+*********************  MESSAGE SEVERITY SUMMARY ********************************
+
+                                       ---COMBINED---   ---VEHICLE---
+THE MAXIMUM SEVERITY FOR THE CURRENT RUN  = CRITICAL       CRITICAL
+
+                  Number of INFORMATIONAL = 62                 30
+                  Number of WARNING       = 24                  0
+                  Number of CRITICAL      = 12                  6
+                  Number of FATAL         = 0                   0
+
+
+TOTAL NUMBER OF ERRORS FOR THE CURRENT RUN =  98                36

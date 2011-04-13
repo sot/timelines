@@ -1,0 +1,26 @@
+       OFLS Mission Planning and Scheduling - OR ER Translator Error Log
+                           MPS MTRAN VERSION = 11.00
+                             2010:270:20:47:47.000
+
+
+Error Log File:  /ehs/ofls/build/bin/mps/output/m276:0910/OCT0410_A10.err
+
+
+ WARNING       GMT  2010:270:20:47:47.000 ; Message  191310 ; 
+               MTRAN - OR/ER TRANSLATOR PROCESSING: WINDOW TIME RANGE DOES
+               NOT OVERLAP THE PLANNING PERIOD TIME RANGE, 2010:276:09:58:11.417
+               TO 2010:284:02:53:34.456.  KEYWORD = COMM.  ID = D2737.   
+                                                                         
+                                                          
+
+ CRITICAL      GMT  2010:270:20:47:48.000 ; Message  191005 ; 
+               MTRAN - OR/ER TRANSLATOR PROCESSING:  CONTEXT ERROR - CORRESPONDING
+               PRECEDING REQUEST ID = 00000 NOT FOUND. KEYWORD =  OBS17. ID
+               =  12847 .                                                
+                                                                         
+                 
+
+ Number of Informational messages generated = 0
+ Number of Warning messages generated       = 1
+ Number of Critical messages generated      = 1
+ Number of Fatal messages generated         = 0

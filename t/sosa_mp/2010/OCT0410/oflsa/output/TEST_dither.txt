@@ -1,0 +1,19 @@
+>>> Dither Check - ./CR276_0906.backstop
+
+[PASS] 2010279.043840629
+yomega     = 0.00578053 rad/sec	| zomega     = 0.00817512 rad/sec
+yPeriod    = 1087.0  sec	| zPeriod    = 768.6   sec
+yAmp       = 20.00 arcsec	| zAmp       = 20.00 arcsec
+maxSpeed   = 0.2002 arcsec/sec
+
+2010279.043841629 ENABLE DITHER
+
+[PASS] 2010279.054129991
+yomega     = 0.00628319 rad/sec	| zomega     = 0.00888547 rad/sec
+yPeriod    = 1000.0  sec	| zPeriod    = 707.1   sec
+yAmp       = 8.00 arcsec	| zAmp       = 8.00 arcsec
+maxSpeed   = 0.0871 arcsec/sec
+
+2010279.054130991 ENABLE DITHER
+
+[PASS] OVERALL RESULT

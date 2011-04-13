@@ -1,0 +1,427 @@
+                       Command Load Generation Error Log
+                              CMAN VERSION = 11.00
+                             2010:270:21:51:48.000
+
+
+Error Log File:  /ehs/ofls/build/bin/cm/output/Temp07/Temp07.err
+
+
+ CRITICAL      GMT  2010:270:21:53:22.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:22.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:25.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:25.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:28.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:28.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:28.000 ; Message  190043 ; 
+               CMAN. ERROR. The query for all ODE elements of type: SPACECRAFT-CLOCK-CORRELATION,
+               returned 1006 elements. Only 1000 elements will be processed.
+               
+ CRITICAL      GMT  2010:270:21:53:43.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:43.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:53:44.000 ; Message  190043 ; 
+               CMAN. ERROR. The query for all ODE elements of type: DEFINITIVE-ORBIT-EVENTS,
+               returned 1408 elements. Only 1000 elements will be processed.
+               
+ CRITICAL      GMT  2010:270:21:54:01.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:54:01.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:54:01.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:54:01.000 ; Message  190302 ; 
+               uut_get_elmnt.  ERROR RECEIVED WHILE  DISCONNECTING FROM  TO
+               ODE.  STATUS IS -2.
+
+ CRITICAL      GMT  2010:270:21:54:32.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ CRITICAL      GMT  2010:270:21:54:32.000 ; Message  190029 ; 
+                CMAN . ERROR -- Call to EHS function " ODE_Database_Get_Names
+               " from " uut_get_elmnt " failed.
+
+ INFORMATIONAL GMT  2010:270:21:55:33.000 ; Message  192153 ; 
+               CMAN. The command: AOACRSTD, with negative delta time, has an
+               execution time of 2010:276:09:55:11.417, which is before the
+               planning period start time. Input file: /ehs/ofls/build/bin/cm/output/C276:0900/MANVR.ATS,
+               traceid: O114330002.185. The planning period start time has
+               been adjusted to: 2010:276:09:55:11.417.
+
+ INFORMATIONAL GMT  2010:270:21:55:43.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 222 steps with time span: 2010:276:09:55:11.417
+               - 2010:276:10:47:18.504, was loaded into SCS num: 128. AON
+               statement trace id: O114330002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:43.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 205 steps with time span: 2010:276:23:45:24.153
+               - 2010:277:00:21:03.291, was loaded into SCS num: 128. AON
+               statement trace id: O121430002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:43.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 204 steps with time span: 2010:277:03:08:58.940
+               - 2010:277:03:26:14.366, was loaded into SCS num: 128. AON
+               statement trace id: O121710002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 320 steps with time span: 2010:277:04:38:37.546
+               - 2010:277:05:23:59.333, was loaded into SCS num: 128. AON
+               statement trace id: RRDE410102.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:277:10:09:22.857
+               - 2010:277:10:34:29.147, was loaded into SCS num: 128. AON
+               statement trace id: EGG_410002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:277:10:52:25.848
+               - 2010:277:11:14:26.429, was loaded into SCS num: 128. AON
+               statement trace id: ET_X420002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 244 steps with time span: 2010:277:16:10:12.575
+               - 2010:277:16:44:52.214, was loaded into SCS num: 128. AON
+               statement trace id: O122460002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 102 steps with time span: 2010:278:06:14:04.840
+               - 2010:278:06:36:30.551, was loaded into SCS num: 129. AON
+               statement trace id: O123080002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:44.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 233 steps with time span: 2010:278:18:32:35.551
+               - 2010:278:19:00:19.148, was loaded into SCS num: 129. AON
+               statement trace id: O114610002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:45.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 212 steps with time span: 2010:278:19:31:39.148
+               - 2010:278:19:47:04.374, was loaded into SCS num: 129. AON
+               statement trace id: O116920002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:45.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 213 steps with time span: 2010:278:21:36:36.148
+               - 2010:278:22:05:35.310, was loaded into SCS num: 129. AON
+               statement trace id: O115660002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:45.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 256 steps with time span: 2010:279:04:13:30.959
+               - 2010:279:04:44:11.629, was loaded into SCS num: 129. AON
+               statement trace id: O131210002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:45.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 270 steps with time span: 2010:279:05:15:31.629
+               - 2010:279:05:47:00.991, was loaded into SCS num: 129. AON
+               statement trace id: O128660003.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 205 steps with time span: 2010:279:12:41:40.991
+               - 2010:279:13:07:10.357, was loaded into SCS num: 130. AON
+               statement trace id: O115610002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 230 steps with time span: 2010:279:14:31:46.005
+               - 2010:279:15:05:04.302, was loaded into SCS num: 130. AON
+               statement trace id: O122530002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 326 steps with time span: 2010:279:20:19:44.314
+               - 2010:279:20:45:19.005, was loaded into SCS num: 130. AON
+               statement trace id: RRDE420102.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:279:23:38:21.498
+               - 2010:280:00:20:00.518, was loaded into SCS num: 130. AON
+               statement trace id: EGG_420002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 88 steps with time span: 2010:280:02:01:15.738
+               - 2010:280:02:42:58.013, was loaded into SCS num: 130. AON
+               statement trace id: EG1_420002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:280:03:47:35.239
+               - 2010:280:04:20:00.518, was loaded into SCS num: 130. AON
+               statement trace id: ET_X430002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:46.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 244 steps with time span: 2010:280:07:06:31.326
+               - 2010:280:07:45:44.864, was loaded into SCS num: 130. AON
+               statement trace id: O123280002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:47.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 233 steps with time span: 2010:282:06:24:45.753
+               - 2010:282:07:20:49.866, was loaded into SCS num: 129. AON
+               statement trace id: O116940002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:47.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 212 steps with time span: 2010:282:08:58:49.866
+               - 2010:282:09:12:29.649, was loaded into SCS num: 129. AON
+               statement trace id: O116970002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:47.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 320 steps with time span: 2010:282:11:46:11.765
+               - 2010:282:12:35:42.880, was loaded into SCS num: 129. AON
+               statement trace id: RRDE430102.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 101 steps with time span: 2010:282:14:40:32.558
+               - 2010:282:15:24:02.320, was loaded into SCS num: 129. AON
+               statement trace id: EGG_430002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:282:17:40:49.254
+               - 2010:282:17:48:03.605, was loaded into SCS num: 129. AON
+               statement trace id: EG1_430002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 80 steps with time span: 2010:282:19:06:37.571
+               - 2010:282:19:32:58.101, was loaded into SCS num: 129. AON
+               statement trace id: ET_X440002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 244 steps with time span: 2010:282:23:33:30.717
+               - 2010:282:23:57:50.754, was loaded into SCS num: 129. AON
+               statement trace id: O129880002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 205 steps with time span: 2010:283:08:20:25.059
+               - 2010:283:09:07:33.404, was loaded into SCS num: 129. AON
+               statement trace id: O127470002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:48.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 212 steps with time span: 2010:283:11:22:09.053
+               - 2010:283:11:39:58.410, was loaded into SCS num: 129. AON
+               statement trace id: O126820002.181.
+
+ INFORMATIONAL GMT  2010:270:21:55:49.000 ; Message  192228 ; 
+               CMAN. An ATOM group containing 228 steps with time span: 2010:283:12:22:25.053
+               - 2010:283:12:59:14.456, was loaded into SCS num: 130. AON
+               statement trace id: O131380002.181.
+
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL276:0900.
+               
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL277:2000.
+               
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL279:1100.
+               
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL280:1800.
+               
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL282:0300.
+               
+ CRITICAL      GMT  2010:270:21:55:49.000 ; Message  192096 ; 
+               cml_schedule. No uplink opportunities selected for CL283:1200.
+               
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0074C014 with execution time of: 2010:276:10:29:13.153
+               and  trace id: O114330008.037, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0057A024 with execution time of: 2010:277:00:09:17.940
+               and  trace id: O121430008.082, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0076A014 with execution time of: 2010:277:03:16:33.940
+               and  trace id: O121710008.025, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0021C024 with execution time of: 2010:277:04:50:15.840
+               and  trace id: RRDE410005.065, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT008EA014 with execution time of: 2010:277:15:10:55.840
+               and  trace id: RRDX420005.053, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00458024 with execution time of: 2010:277:16:34:16.840
+               and  trace id: O122460008.094, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00459024 with execution time of: 2010:278:06:38:51.551
+               and  trace id: O123080007.044, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT008FC014 with execution time of: 2010:278:18:52:03.148
+               and  trace id: O114610011.086, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00958014 with execution time of: 2010:278:19:39:14.148
+               and  trace id: O116920008.027, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00956014 with execution time of: 2010:278:21:53:21.959
+               and  trace id: O115660008.069, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT008FC014 with execution time of: 2010:279:05:38:44.991
+               and  trace id: O128660014.064, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:49.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00956014 with execution time of: 2010:279:12:54:57.005
+               and  trace id: O115610008.009, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00458024 with execution time of: 2010:279:14:43:43.302
+               and  trace id: O122530010.052, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00216024 with execution time of: 2010:279:20:31:42.753
+               and  trace id: RRDE420005.096, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0021C024 with execution time of: 2010:280:06:11:45.753
+               and  trace id: RRDX430005.013, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT004DE024 with execution time of: 2010:280:07:35:06.753
+               and  trace id: O123280008.058, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00958014 with execution time of: 2010:282:07:01:27.866
+               and  trace id: O116940011.016, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT004A4024 with execution time of: 2010:282:09:06:24.866
+               and  trace id: O116970008.055, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT008EA014 with execution time of: 2010:282:11:57:50.059
+               and  trace id: RRDE430005.095, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00216024 with execution time of: 2010:282:22:22:03.059
+               and  trace id: RRDX440005.013, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00A24014 with execution time of: 2010:282:23:47:35.059
+               and  trace id: O129880008.051, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT006CC024 with execution time of: 2010:283:08:51:27.053
+               and  trace id: O127470008.000, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT0045A024 with execution time of: 2010:283:11:29:44.053
+               and  trace id: O126820008.039, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+ WARNING       GMT  2010:270:21:55:50.000 ; Message  192360 ; 
+               CMAN.  Number of OBC Software commands per minor cycle error.
+               The command: WT00458024 with execution time of: 2010:283:12:37:53.456
+               and  trace id: O131380010.083, was command number 88 for this
+               minor cycle. Only 21 commands per cycle are allowed in type
+                CCDM.
+
+
+
+THE MAXIMUM SEVERITY FOR THE CURRENT RUN  = CRITICAL     
+
+Number of INFORMATIONAL Errors = 31
+Number of WARNING       Errors = 24
+Number of CRITICAL      Errors = 22
+Number of FATAL         Errors = 0
+
+
+
+TOTAL NUMBER OF ERRORS FOR THE CURRENT RUN  = 77

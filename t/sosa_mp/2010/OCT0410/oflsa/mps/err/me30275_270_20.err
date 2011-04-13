@@ -1,0 +1,22 @@
+                                MEXEC Error Log
+                           MPS MEXEC VERSION = 11.00
+                             2010:270:20:47:28.000
+
+
+Error Log File:  /ehs/ofls/build/bin/mps/output/m276:0910/me30275:270:20.err
+
+
+ WARNING       GMT  2010:270:20:47:28.000 ; Message  190207 ; 
+               MPS MEXEC PROCESSING. SINGLE DSN SCHEDULE FILE: /ehs/ofls/build/bin/mps/output/m276:0910/DSN276_284.mpA,
+               DOES NOT COVER THE CURRENT PROCESSING TIME INTERVAL + CONTINUITY
+               EXTENSION. START TIME: 2010:276:09:58:11.417. STOP TIME: 2010:284:02:53:34.456.
+               CONTINUITY EXTENSION: 000:12:00:00.000.
+
+ CRITICAL      GMT  2010:270:20:47:42.000 ; Message  191325 ; 
+               ME_AUTO_PROC. OVERRIDING CONTINUITY SYSTEM MOMENTUM. USER INPUT
+               IS: X-AXIS = -13.55; Y-AXIS = -26.03; Z-AXIS = 4.06 kg-m^2/sec.
+               
+ Number of Informational messages generated = 0
+ Number of Warning messages generated       = 1
+ Number of Critical messages generated      = 39
+ Number of Fatal messages generated         = 0

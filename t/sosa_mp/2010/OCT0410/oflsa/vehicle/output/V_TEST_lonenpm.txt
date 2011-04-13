@@ -1,0 +1,9 @@
+>>> Running Lone NPM Check - vehicle/VR276_0906.backstop
+
+Searching for continuity prior to 2010276.095511417
+ATTITUDE [ 0.164358  0.667801  0.287736  0.666510 ] at 2010276.035259913
+
+[PASS] Continuity Search
+
+
+[PASS] OVERALL RESULT

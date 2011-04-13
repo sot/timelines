@@ -1,0 +1,16 @@
+
+>>> Running Eclipse Check - vehicle/VR276_0906.backstop (OCT0410W)
+
+>> ECLIPSE.txt File Processing
+[PASS] ECLIPSE.txt File Processing
+
+>> Continuity Search
+[PASS] Continuity Search
+
+>> .backstop file processing
+[PASS] .backstop file processing
+
+>> Determine whether eclipsecheck needs to run
+No eclipses found in this schedule; will not run.
+
+

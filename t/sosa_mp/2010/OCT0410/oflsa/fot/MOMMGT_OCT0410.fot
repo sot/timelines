@@ -1,0 +1,10 @@
+! $Revision: 2.1 $
+! $Date: 2010/05/18 $
+
+! Template edit and rename for weekly load.
+
+ATS,MOMMGT,
+SYSMOM_X=    0.0,
+SYSMOM_Y=  -20.0,
+SYSMOM_Z=   16.0,
+TIME=2010:277:09:50:00.000

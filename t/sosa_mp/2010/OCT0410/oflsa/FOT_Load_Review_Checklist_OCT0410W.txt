@@ -1,0 +1,214 @@
+Date:                04/08/11
+Time:                11:44 am
+
+Load:                OCT0410W
+Backstop File:       ./CR276_0906.backstop
+
+Schedule Start:      2010:276:09:58:11.417
+Schedule Stop:       2010:284:02:53:34.456
+
+First backstop cmd:  2010:276:09:55:11.417
+
+
+MANEUVERS:
+
+   > Sun constraints check:                                              ? 
+
+   > FSS field-of-view check:                                            ? 
+
+     * Sun Position Monitor disabled from:
+
+       2010:277:04:53:23.141 - 2010:277:16:41:36.565
+       2010:279:05:18:43.930 - 2010:279:13:07:10.357
+       2010:279:14:34:58.306 - 2010:280:07:42:29.215
+       2010:282:12:00:57.360 - 2010:283:12:55:58.807
+
+   > Earth exclusion check (10 deg):                                     ? 
+
+     * Maneuver/hold violation due to Earth observation
+       (Obs ID 00000: Inst/Grat):
+
+         2011:000:00:00:00.000 - 2011:000:00:00:00.000
+
+       - No commanded star catalog for Earth observation
+       - Subsequent observation has dwell on guide stars > 20 min
+
+   > Moon exclusion check (6 deg):                                       ? 
+
+   > Bright x-ray source exclusion check:                                ? 
+
+   > Gyro hold duration check:                                           ? 
+
+     * Gyro hold duration for Earth observation < 2 hr
+
+   > Segmented maneuvers timing check:                                   ? 
+
+   > Dither check:                                                       OK
+
+     * Dither enabled throughout schedule.
+
+   > Lone NPM command check:                                             OK
+
+   > Normal Maneuver mode duration check:                                OK
+
+   > Momentum dump timing check:                                         OK
+
+   > SCS 84 state:
+
+     * SCS-84 disabled throughout schedule.
+
+
+ECLIPSES:                                                                N/A
+
+   > Are all eclipse attitude pitch angles within 1 deg of 90 deg?  Yes 
+
+
+ASPECT CAMERA (see starcheck output):                                    OK
+
+   > Star & fid light catalog checks
+
+
+ANGULAR MOMENTUM MANAGEMENT:                                             ? 
+
+   > Measured @ 2011:000:00:00:00.000
+     * Momentum = ( 0.00, 0.00, 0.00 )
+     * MUPS valve temperature A1 = 0.00
+     * MUPS valve temperature A2 = 0.00
+
+   > Previous momentum dumps (used in propagating momentum):
+
+     * N_M: 2011:000:00:00:00.000 (Obs ID 00000 [Inst/Grat])
+
+       Target momentum = ( 0.0, 0.0, 0.0 )
+
+   > Propagated @ 2010:276:09:58:11.417
+     * Momentum = ( 0.0, 0.0, 0.0 )
+     * MUPS valve temperature A1 = 0.0
+     * MUPS valve temperature A2 = 0.0
+
+   > Momentum unloading scheduling check
+
+     * N_M: 2011:000:00:00:00.000 (Obs ID 00000 [Inst/Grat])
+
+       Target momentum = ( 0.0, 0.0, 0.0 )
+
+       - Starting valve temperature A1 = 0.0 < 112 (decreasing)
+       - Starting valve temperature A2 = 0.0 < 110 (decreasing)
+
+       - Settling valve temperature A1 = 0.0 < 115
+       - Settling valve temperature A2 = 0.0 < 115
+
+       - Predicted Duration: 0 sec <= 363 ~ 400/1.1 sec
+       - Timeout after:      0 sec  = 400 sec
+       - Within last 85 minutes of weekly load? 
+
+     * N_M: 2011:000:00:00:00.000 (Obs ID 00000 [Inst/Grat])
+
+       Target momentum = ( 0.0, 0.0, 0.0 )
+
+       - Starting valve temperature A1 = 0.0 < 132 (decreasing)
+       - Starting valve temperature A2 = 0.0 < 139 (decreasing)
+
+       - Settling valve temperature A1 = 0.0 < 135
+       - Settling valve temperature A2 = 0.0 < 135
+
+       - Predicted Duration: 0 sec <= 272 ~ 300/1.1 sec
+       - Timeout after:      0 sec  = 400 sec
+       - Within last 85 minutes of weekly load? 
+
+     * N_M: 2011:000:00:00:00.000 (Obs ID 00000 [Inst/Grat])
+
+       Target momentum = ( 0.0, 0.0, 0.0 )
+
+       - Starting valve temperature A1 = 0.0 < 163 (decreasing)
+       - Starting valve temperature A2 = 0.0 < 164 (decreasing)
+
+       - Settling valve temperature A1 = 0.0 < 165
+       - Settling valve temperature A2 = 0.0 < 165
+
+       - Predicted Duration: 0 sec <= 181 ~ 200/1.1 sec
+       - Timeout after:      0 sec  = 400 sec
+       - Within last 85 minutes of weekly load?  
+
+     FOT request: P_MOMPR_VDEA_OCT0410.fot
+
+   > Propagated @ 2010:284:02:53:34.456
+     * Momentum = ( 0.0, 0.0, 0.0 )
+
+
+REACTION WHEEL SPEEDS:                                                   ? 
+
+   > During dwells, reaction wheel speeds are all > 500 RPM
+     in magnitude.
+
+
+TIMELINE REPORT CHECK:                                                   OK
+
+   > .tlr commands = 6843
+   > .cld commands = 6843
+
+
+DISABLED COMMAND CHECK:                                                  OK
+
+     > Disabled commands: 0
+
+
+MECH CHECK:                                                              OK
+
+
+IUMODE CHECK:                                                            OK
+
+
+ACIS PACKET TIMING CHECK:                                                OK
+
+
+RADMON TIMING CHECK (only needed for radiation replan load):             ? 
+
+   > Minor Frame of first RADMON enable = xxx > 10
+
+
+TEPHIN CHECK:                                                            ? 
+
+   > Measured   TEPHIN @ 2011:000:00:00:00.000     = 0.0
+   
+   > Propagated TEPHIN @ 2010:276:09:58:11.417     = 0.0
+
+   > Maximum    TEPHIN for schedule                = 0.0 <= 132.0
+
+   > Propagated TEPHIN @ 2010:284:02:53:34.456     = 0.0
+
+
+TCYLAFT6 CHECK:                                                          ? 
+
+   > Measured   TCYLAFT6 @ 2011:000:00:00:00.000   = 0.0
+
+   > Propagated TCYLAFT6 @ 2010:276:09:58:11.417   = 0.0
+
+   > Maximum    TCYLAFT6 for schedule              = 0.0 <= 93.0
+
+   > Propagated TCYLAFT6 @ 2010:284:02:53:34.456   = 0.0
+     
+     
+1PDEAAT CHECK:                                                           ? 
+
+   > Measured   1PDEAAT @ 2011:000:00:00:00.000    = 0.0  (SIMPOS = 0
+                                                           chips  = 6)
+
+   > Propagated 1PDEAAT @ 2010:276:09:58:11.417    = 0.0  (SIMPOS = 0
+                                                           chips  = 6)
+
+   > Maximum    1PDEAAT for schedule               = 0.0 <= 52.5 
+
+   > Propagated 1PDEAAT @ 2010:284:02:53:34.456    = 0.0  (SIMPOS = 0
+                                                           chips  = 6)
+
+
+PLINE CHECK:                                                             ? 
+
+   > 156 < pitch angle < 162 : No observations
+   > 156 < pitch angle < 166 : No observations
+   > 156 < pitch angle < 170 : No observations
+   > pitch angle > 170       : No observations
+
+   > Eclipse Attitudes are NOT used for PLINE preheating: True
+     [ True => OK / False => NOT OK ]

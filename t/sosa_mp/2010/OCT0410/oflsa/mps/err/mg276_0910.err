@@ -1,0 +1,36 @@
+        OFLS Mission Planning and Scheduling - Star Selection Error Log
+                   MPS MGSAS - Star Selection VERSION = 11.00
+                             2010:270:20:49:13.000
+
+
+Error Log File:  /ehs/ofls/build/bin/mps/output/m276:0910/mg276:0910.err
+
+
+ CRITICAL      GMT  2010:270:20:49:33.000 ; Message  190149 ; 
+               CAP CATALOG GENERATION - UUT_STAR_DAT.  EXCEEDED MAXIMUN NUMBER
+               OF STARS FOR STAR CAP CATALOG.
+
+ CRITICAL      GMT  2010:270:20:52:49.000 ; Message  191306 ; 
+               MG_SOCK_SET_DATA. FID LIGHT 11 IS UNAVAILABLE FOR PART OR ALL
+               OF THE ROLL RANGE FROM 91.8019823 TO 92.1619823 DEGREES. REASON:
+               RADIALLY SPOILED BY STAR. REQUEST ID: 1312100.
+
+ CRITICAL      GMT  2010:270:20:52:49.000 ; Message  191306 ; 
+               MG_SOCK_SET_DATA. FID LIGHT 12 IS UNAVAILABLE FOR PART OR ALL
+               OF THE ROLL RANGE FROM 91.8019823 TO 92.1619823 DEGREES. REASON:
+               RADIALLY SPOILED BY STAR. REQUEST ID: 1312100.
+
+ CRITICAL      GMT  2010:270:20:52:49.000 ; Message  191306 ; 
+               MG_SOCK_SET_DATA. FID LIGHT 13 IS UNAVAILABLE FOR PART OR ALL
+               OF THE ROLL RANGE FROM 91.8019823 TO 92.1619823 DEGREES. REASON:
+               RADIALLY SPOILED BY STAR. REQUEST ID: 1312100.
+
+ CRITICAL      GMT  2010:270:20:53:02.000 ; Message  191306 ; 
+               MG_SOCK_SET_DATA. FID LIGHT 1 IS UNAVAILABLE FOR PART OR ALL
+               OF THE ROLL RANGE FROM 151.556762 TO 151.916762 DEGREES. REASON:
+               RADIALLY SPOILED BY STAR. REQUEST ID: 1232800.
+
+ Number of Informational messages generated = 0
+ Number of Warning messages generated       = 0
+ Number of Critical messages generated      = 5
+ Number of Fatal messages generated         = 0

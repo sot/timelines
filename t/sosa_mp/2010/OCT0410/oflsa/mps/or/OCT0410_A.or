@@ -1,0 +1,406 @@
+HDR,HDR_ID=OCT0410_A
+
+BEGIN_COMMENT,ID=49999
+
+  ** WARNING: This file automatically generated 
+  ** by Matlab OR Viewer. 24-Sep-2010 11:51:37
+  ** 
+  ** Some OR parameters may have been modified.
+
+END_COMMENT
+
+BEGIN_COMMENT,ID=49999
+
+This is the OR list for the week of OCT 04, 2010.
+SOT Mission Planner: Dillon Foight
+FOT Mission Planner: David Balke
+Please email all notes and comments to Dillon ( dfoight@head.cfa ).
+
+Version list:
+_00 : as extracted using MP software
+_01 : LTS OR list released Sep 15, 2010
+      Includes recently approved TOO 11433
+      Total time in OR list : 362.00 ksec
+_02 : not released
+_03 : added pool targets:
+      12143, 12171, 12253, 12988, 12747, 12847
+      added split piece of 12246: 13138
+      added 10ks to 12328 (sloshed out of 12329)
+      two obsids: 12988 and 12847 are not approved
+      for flight. USINT contacted on 09/24/10
+
+**************************************************************
+For this week, please note:
+Priority Definitions
+---------------------------------
+- 4 for constrained observations that absolutely must be done in this load (none)
+- 5 for time constrained or otherwise urgent targets that should be done in 
+    this load if at all possible
+- 6 for objects from the LTS w/o time constraints 
+
+Comments
+---------------------------------
+11561 - Last observation in series, window is good all week:
+        Start Window: 2010:259:01:43:25.606 (SEP1610 01:43:25.606)
+        End Window:   2010:299:01:43:25.606 (OCT2610 01:43:25.606)
+        
+11566 - Last observation in series, window is good all week:
+        Start Window: 2010:274:02:18:46.000 (OCT0110 02:18:46.000)
+        End Window:   2010:354:02:18:46.000 (DEC2010 02:18:46.000)
+12328 - Observer requests that any splits be larger than 30ks. Also,
+	splits do not need rolls matched.
+Low Visibility targets:
+
+Obsid	Day of year for low vis
+------------------------------
+12171 	275m
+12143 	276m, 277m
+11561 	277e, 279e, 282e, 284e, 285e
+
+
+Pitch/Time Summary
+---------------------------------
+Total time in OR list : 516.27 ksec
+Total time at PSMC pitch angle (46-56) : 34.00 ksec
+Percent of total : 6.586%
+Total time at bad pitch angle (70-127) : 154.00 ksec
+Percent of total : 29.829%
+Total time at good pitch angle (56-70,127-145) : 241.27 ksec
+Percent of total : 46.733%
+Total time at cold pitch angle (145-156) : 82.00 ksec
+Percent of total : 15.883%
+Total time in P-line region (156-170) : 5.00 ksec
+Percent of total : 0.968%
+Total time at forbidden pitch angle (0-46,170-180) : 0.00 ksec
+Percent of total : 0.000%
+
+Total time at priority 4, 5 or 6 : 394.27 ksec
+Total time at bad pitch angle (70-127) : 150.00 ksec
+Percent of total : 38.045%
+
+Note: Pitch totals are calculated based on a midweek roll.
+
+
+
+
+			Target Summary: OCT0410
+
+			  pitch angle/roll
+			    (day of year)
+    obsid  time  P  U      277         283         target          PI RC OC
+    -----  ----  -  -  ----------  ----------  ----------  ---------- -- --
+ ** 11433    50  5  N    72/306.2    72/312.4   TDE_PS1_1      Gezari  5  0
+    11461     2  5  N     61/13.6     64/19.2  SDSS J1151          Ho  1  0
+    11561     5  5  N    129/25.9    128/18.4  QJ0158-432    Kochanek  5  4
+    11566    22  5  N     48/82.4     54/80.3  SDSS0924+0    Kochanek  5  4
+    11692     6  5  N     49/21.3     53/27.0  SDSS J1134       Ghosh  4  0
+    11694     6  5  N    54/326.3    54/333.6  SDSS J1426       Ghosh  4  0
+    11697     8  5  N    58/336.3    59/343.1  SDSS J1359    Tremonti  6  5
+ ** 12246    50  5  N    78/309.6    79/315.6  Abell 2146     Russell  5  1
+    12328   170  5  N    59/155.4    58/148.6    NGC 3603    Townsley  6  2
+    12866    25  5  N    148/66.8    152/57.5     NGC 985   Mushotzky  1  0
+ ** 13138    50  5  N    78/309.6    79/315.6  Abell 2146     Russell  5  1
+    12143    10  8  N     59/74.8     65/74.6  SDSSJ08531     Kaastra  2  1
+ ** 12171     4  8  N     77/79.3     83/79.7  SDSS J0741     Garmire  3  0
+    12253    19  8  N    144/85.4    149/80.4        Z808     Maughan  5  0
+  * 12747     8  8  N   158/268.1   153/274.0      3C 458      Harris  4  2
+  * 12847     5  8  N   161/180.8   162/199.4    0035+227  Siemiginow  5  0
+    12988    30  8  N    147/68.5    151/59.7  NGC 1042 U      Sutton  6  4
+    12308    46  9  N    66/302.2    64/308.5  SLJ1602.8+       Giles  5  0
+
+*** = forbidden zone (0-46,170-180)
+ ** = bad pitch (70-127)
+  * = pline restrictions (156-170)
+
+
+Time Summary
+---------------------------------
+
+Priority	# of Obs	Time (seconds)
+5		11		   394270.00
+8		6		    76000.00
+9		1		    46000.00
+
+HRC		0		        0.00
+ACIS		18		   516270.00
+
+TOTAL		18		   516270.00
+
+
+
+Targets Not Approved for Flight
+---------------------------------
+12847 not approved for flight. email sent 09/24/10 to Ed Kellogg
+12988 not approved for flight. email sent 09/24/10 to Ping Zhao
+13138 does not need approval because it is a split 
+      of 12246 and is scheduled in the same week
+
+
+Approval Status
+---------------------------------
+
+702019 11433          TDE_PS1_1             Gezari ACIS-S NONE TE_0074C  zhao  09/15/10
+702047 11461 SDSS J115138.10+561331.9             Greene ACIS-S NONE TE_008FC  emk  12/01/09
+702147 11561        QJ0158-4325           Kochanek ACIS-S NONE TE_00956  emk  11/09/09
+702152 11566      SDSS0924+0219           Kochanek ACIS-S NONE TE_00956  emk  11/09/09
+702277 11692 SDSS J113445.83+431858.0              Ghosh ACIS-S NONE TE_00958  emk  11/23/09
+702279 11694 SDSS J142610.59+441124.0              Ghosh ACIS-S NONE TE_00958  emk  11/23/09
+702282 11697 SDSS J135920.99+513738.9           Tremonti ACIS-S NONE TE_004A4  emk  12/06/09
+401139 12143 SDSSJ085312.3+162619             Jonker ACIS-S NONE TE_0057A  nadams  06/30/10
+702335 12171    SDSS J0741+2520             Brandt ACIS-S NONE TE_0076A  emk  06/24/10
+801052 12246         Abell 2146            Russell ACIS-I NONE TE_00458  maxim  07/23/10
+800973 12253               Z808            Maughan ACIS-I NONE TE_00458  maxim  07/19/10
+801013 12308     SLJ1602.8+4335              Giles ACIS-I NONE TE_00458  maxim  07/23/10
+200666 12328           NGC 3603           Townsley ACIS-I NONE TE_004DE  swolk  09/20/10
+702383 12747             3C 458             Harris ACIS-S NONE TE_006CC  emk  09/24/10
+702480 12847           0035+227      Siemiginowska ACIS-S NONE TE_00824  *** not approved for flight ***
+702499 12866            NGC 985          Mushotzky ACIS-S NONE TE_008FC  emk  09/20/10
+600956 12988      NGC 1042 ULX1             Sutton ACIS-S NONE TE_00A24  *** not approved for flight ***
+801052 13138         Abell 2146            Russell ACIS-I NONE TE_00458  *** not approved for flight ***
+
+END_COMMENT
+
+BEGIN_COMMENT,ID=49999
+***OR QUICK LOOK START
+   NOTE: This comment is automatically regenerated when using the 
+         mp_orf_gui or the mp_orf_file applications.
+   
+                                                            Req.  Opt.  Drop
+SeqNbr    ObsId     Target Name              Observer       Chip  Chip  Chip
+-------------------------------------------------------------------------------
+702019    11433     TDE_PS1_1                Gezari            5     0     0
+702047    11461     SDSS J115138.10+5613     Greene            1     0     0
+702147    11561     QJ0158-4325              Kochanek          5     4     0
+702152    11566     SDSS0924+0219            Kochanek          5     4     0
+702277    11692     SDSS J113445.83+4318     Ghosh             4     0     0
+702279    11694     SDSS J142610.59+4411     Ghosh             4     0     0
+702282    11697     SDSS J135920.99+5137     Tremonti          6     5     0
+801052    12246     Abell 2146               Russell           5     1     0
+200666    12328     NGC 3603                 Townsley          6     2     0
+702499    12866     NGC 985                  Mushotzky         1     0     0
+801052    13138     Abell 2146               Russell           5     1     0
+401139    12143     SDSSJ085312.3+162619     Jonker            2     1     0
+702335    12171     SDSS J0741+2520          Brandt            3     0     0
+800973    12253     Z808                     Maughan           5     0     0
+702383    12747     3C 458                   Harris            4     2     0
+702480    12847     0035+227                 Siemiginowska     5     0     0
+600956    12988     NGC 1042 ULX1            Sutton            6     4     0
+801013    12308     SLJ1602.8+4335           Giles             5     0     0
+***OR QUICK LOOK END
+END_COMMENT
+
+OBS,
+ ID=11433,TARGET=(240.316879,55.477256,{TDE_PS1_1}),
+ DURATION=(46610.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_0074C,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,45000.000000),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12143,TARGET=(133.303750,16.437639,{SDSSJ085312.3+162619}),
+ DURATION=(10000.0),
+ PRIORITY=8,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_0057A,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,9000.000000),PRECEDING=(11433),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12171,TARGET=(115.477917,25.341556,{SDSS J0741+2520}),
+ DURATION=(400.0,400.0,14000.0),
+ PRIORITY=8,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_0076A,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,4000.000000),PRECEDING=(12143),MIN_ACQ=1,MIN_GUIDE=1
+
+BEGIN_COMMENT, ID=12246
+Remarks:
+maxim 9/17/10: if not scheduled in 10/4 week, may need to adjust target 
+offsets. 
+END_COMMENT
+OBS,
+ ID=12246,TARGET=(239.042390,66.357434,{Abell 2146}),
+ DURATION=(48027.0),
+ PRIORITY=5,SI=ACIS-I,GRATING=NONE,SI_MODE=TE_00458,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(-0.041667,0.000000),SIM_OFFSET=(-1989),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,45000.000000),PRECEDING=(T_X42),MIN_ACQ=1,MIN_GUIDE=1,
+ ROLL=(315.0)
+
+OBS,
+ ID=12308,TARGET=(240.720000,43.590000,{SLJ1602.8+4335}),
+ DURATION=(43085.0),
+ PRIORITY=9,SI=ACIS-I,GRATING=NONE,SI_MODE=TE_00458,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(-0.050000,0.000000),SIM_OFFSET=(-3102),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,41400.000000),PRECEDING=(12246),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=11461,TARGET=(177.908750,56.225528,{SDSS J115138.10+5613}),
+ DURATION=(2000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_008FC,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,2000.000000),PRECEDING=(12308),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=11692,TARGET=(173.690833,43.316111,{SDSS J113445.83+4318}),
+ DURATION=(6000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00958,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,5400.000000),PRECEDING=(11461),MIN_ACQ=1,MIN_GUIDE=1
+
+BEGIN_COMMENT, ID=11566
+NOTE: The PRECEDING=(11565,100:00:00:00.000,180:00:00:00.000) parameter has
+been removed from this OR because there is no OR with an ID=11565
+in this OR list.
+Remarks:
+The target is (basically) visible January-June, October-December. We 
+would like 5 epochs of 22 ksec each, with 4 in the first visibility window and 
+two in the second. This proposal contains 5 of these epochs, and one is part of 
+a related proposal (PI: Schechter) which needs to obtain data on lensed quasars 
+on much longer sampling time scales and with significantly greater depth for 
+this object. The sampling will have to be adjusted if both are approved.
+END_COMMENT
+OBS,
+ ID=11566,TARGET=(141.232917,2.323583,{SDSS0924+0219}),
+ DURATION=(22000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00956,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,19800.000000),PRECEDING=(11692),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=13121, TARGET=(83.633333,22.014472,{PSRB0531+21}), 
+ DURATION=(2000.0),
+ PRIORITY=5, SI=HRC-S, GRATING=LETG, SI_MODE=OBS13121, ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,0.000000),
+ DITHER=(ON,0.005556,0.331200,0.000000,0.005556,0.468400,0.000000),
+ SEGMENT=(1,19800.000000),PRECEDING=(11566),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12866,TARGET=(38.657083,-8.788000,{NGC 985}),
+ DURATION=(25000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_008FC,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,22500.000000),PRECEDING=(13121),MIN_ACQ=1,MIN_GUIDE=1
+
+BEGIN_COMMENT, ID=11561
+NOTE: The PRECEDING=(11560,050:00:00:00.000,090:00:00:00.000) parameter has
+been removed from this OR because there is no OR with an ID=11560
+in this OR list.
+Remarks:
+The target is (basically) visible January-December. We want to obtain 6 
+epochs of 5 ksec each spread relatively uniformly over the year.
+END_COMMENT
+OBS,
+ ID=11561,TARGET=(29.672500,-43.417833,{QJ0158-4325}),
+ DURATION=(5000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00956,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,5000.000000),PRECEDING=(12866),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12253,TARGET=(45.409167,1.927000,{Z808}),
+ DURATION=(1900.0,1900.0,29000.0),
+ PRIORITY=8,SI=ACIS-I,GRATING=NONE,SI_MODE=TE_00458,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(-0.023333,-0.004167),SIM_OFFSET=(-1651),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,17100.000000),PRECEDING=(11561),MIN_ACQ=1,MIN_GUIDE=1
+
+BEGIN_COMMENT, ID=12328
+Remarks:
+Very short observation segments (<30ks) will make it difficult for us to 
+perform astrometric registration of this field to an absolute reference frame. 
+Would actually like different (natural) roll angles to help fill in chip gaps.
+END_COMMENT
+OBS,
+ ID=12328,TARGET=(168.780000,-61.259778,{NGC 3603}),
+ DURATION=(167263.0),
+ PRIORITY=5,SI=ACIS-I,GRATING=NONE,SI_MODE=TE_004DE,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(-0.003333,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,160000.000000),PRECEDING=(T_X43),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=11694,TARGET=(216.543750,44.190000,{SDSS J142610.59+4411}),
+ DURATION=(6000.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00958,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,5400.000000),PRECEDING=(12328),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=11697,TARGET=(209.837500,51.627472,{SDSS J135920.99+5137}),
+ DURATION=(827.0,827.0,18270.0),
+ PRIORITY=5,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_004A4,
+ ACA_MODE=DEFAULT,TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,7443.000000),PRECEDING=(11694),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12988,TARGET=(40.106667,-8.407889,{NGC 1042 ULX1}),
+ DURATION=(30000.0),
+ PRIORITY=8,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00A24,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,27000.000000),PRECEDING=(T_X44),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12747,TARGET=(348.226667,5.279444,{3C 458}),
+ DURATION=(8000.0),
+ PRIORITY=8,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_006CC,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,7200.000000),PRECEDING=(12988),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12847,TARGET=(9.533750,23.057889,{0035+227}),
+ DURATION=(5000.0),
+ PRIORITY=8,SI=ACIS-S,GRATING=NONE,SI_MODE=TE_00824,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,5000.000000),PRECEDING=(00000),MIN_ACQ=1,MIN_GUIDE=1
+
+OBS,
+ ID=12682, TARGET=(345.884167,15.338083,{1RXSJ230334.0+152019}),
+ DURATION=(2000.0), 
+ PRIORITY=8, SI=ACIS-S, GRATING=NONE, SI_MODE=TE_0045A,
+ ACA_MODE=DEFAULT, TARGET_OFFSET=(0.000000,-0.004167),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,2000.000000),PRECEDING=(12747),MIN_ACQ=1,MIN_GUIDE=1
+
+BEGIN_COMMENT, ID=13138
+Remarks:
+maxim 9/17/10: if not scheduled in 10/4 week, may need to adjust target 
+offsets. 
+END_COMMENT
+OBS,
+ ID=13138,TARGET=(239.042390,66.357434,{Abell 2146}),
+ DURATION=(50000.0),
+ PRIORITY=5,SI=ACIS-I,GRATING=NONE,SI_MODE=TE_00458,ACA_MODE=DEFAULT,
+ TARGET_OFFSET=(-0.041667,0.000000),SIM_OFFSET=(-1989),
+ DITHER=(ON,0.002222,0.360000,0.000000,0.002222,0.509100,0.000000),
+ SEGMENT=(1,45000.000000),PRECEDING=(12682),MIN_ACQ=1,MIN_GUIDE=1,
+ ROLL=(315.0)
+
+BEGIN_COMMENT,ID=49999
+********Priority 5 targets.******************************************************
+	These are coordinated or in other ways constrained or urgent observations
+	and should be scheduled this week if at all possible.
+*********************************************************************************
+END_COMMENT
+
+BEGIN_COMMENT,ID=49999
+********Priority 6 targets.******************************************************
+	Unconstrained targets from the LTS.
+*********************************************************************************
+END_COMMENT
+
+BEGIN_COMMENT,ID=49999
+MPCAT File: /data/mpcrit1/mplogs/2010/OCT0410/scheduled/oct0410.mpc
+END_COMMENT
+

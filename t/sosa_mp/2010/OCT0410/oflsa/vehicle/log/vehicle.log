@@ -1,0 +1,158 @@
+
+******************************************
+Fri Apr  8 11:44:35 GMT 2011
+******************************************
+
+----------------------------------------
+HISTORY UPDATE
+----------------------------------------
+
+Does the backstop history need to be updated? (y/n) 
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+IMPORT - vehicle/VR276_0906.backstop
+----------------------------------------
+
+> Validating Timeline Report
+
+CLD File Sequence:
+CL276_0906.cld
+CL277_2006.cld
+CL279_1106.cld
+CL280_1806.cld
+CL282_0306.cld
+CL283_1206.cld
+
+
+0 commands did not match
+0 SCS step numbers did not match
+0 SCS numbers did not match
+.tlr file commands = 3185, .cld commands = 3185
+
+[PASS] validate
+
+> Inverting Timeline Report
+
+Loading Command Field Database...
+Detected High bit via addition
+
+[PASS] invert
+
+> Validating Times
+
+Searching for continuity prior to 2010276.095511417
+Input Reference Time: VCDU 16004608 = GMT 2010238.113715184
+[PASS] Continuity Search
+
+
+711 Times Processed
+Max: -0.0455000400543213 secs
+Av:  -0.189443031276161 secs
+Min: -0.325999975204468 secs
+
+[PASS] timecheck
+
+> History Check
+
+History files are current up to   2010276.035259913
+The first backstop record time is 2010276.095511417
+
+[PASS] historycheck
+
+>> IMPORT COMPLETE
+
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+SPLIT CHECKS
+----------------------------------------
+
+> Command Categorization Check
+
+
+[PASS] cmdcatcheck
+
+> Synchronization Check
+
+
+[PASS] synccheck
+
+>> SPLIT CHECKS COMPLETE
+
+
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+EXPORT - vehicle/VR276_0906.backstop
+----------------------------------------
+
+> Generating Reports
+[ OK ] Spacecraft State Report: vehicle/output/V_RPT_state_byatt_VR276_0906.txt
+[ OK ] Spacecraft State Report: vehicle/output/V_RPT_state_bycomm_VR276_0906.txt
+[ OK ] Maneuver Constraint Check Input: vehicle/output/V_MNVR_SUMMARY_VR276_0906.txt
+
+> Running Tests
+[ N/A] acacheck
+[PASS] mechcheck
+[PASS] acispkt
+[PASS] lonenpm
+[PASS] cmdcheck
+[PASS] iumodecheck
+[PASS] dither
+[PASS] nmmdurationcheck
+[PASS] unloadcheck
+[ N/A] eclipsecheck
+
+>>> ALL TESTS PASSED <<<
+
+----------------------------------------
+GREP
+----------------------------------------
+
+[ OK ] Created vehicle/output/V_NPM_check.txt
+[ OK ] Created vehicle/output/V_RMP_check.txt
+[ OK ] Created vehicle/output/V_SPM_check.txt
+[ OK ] Created vehicle/output/V_UNLOAD_check.txt
+
+>> GREP COMPLETE
+
+----------------------------------------
+FOT CHECKLIST CREATION
+----------------------------------------
+
+[ OK ] FOT Checklist Generation
+
+>> EXPORT COMPLETE
+
+
+----------------------------------------
+vehicle/output DIRECTORY LISTING
+----------------------------------------
+
+V_MNVR_SUMMARY_VR276_0906.txt	   V_TEST_dither.txt
+V_NPM_check.txt			   V_TEST_eclipsecheck.txt
+V_RMP_check.txt			   V_TEST_iumodecheck.txt
+V_RPT_state_byatt_VR276_0906.txt   V_TEST_lonenpm.txt
+V_RPT_state_bycomm_VR276_0906.txt  V_TEST_mechcheck.txt
+V_SPM_check.txt			   V_TEST_nmmdurationcheck.txt
+V_TEST_acacheck.txt		   V_TEST_unloadcheck.txt
+V_TEST_acispkt.txt		   V_UNLOAD_check.txt
+V_TEST_cmdcheck.txt
+
+----------------------------------------
+vehicle DIRECTORY LISTING
+----------------------------------------
+log	V_FOT_Load_Review_Checklist_OCT0410W.txt  VR276_0906.tlr
+output	VR276_0906.backstop
+
+****************************************
+backstop COMPLETE - vehicle/VR276_0906.backstop
+****************************************
+

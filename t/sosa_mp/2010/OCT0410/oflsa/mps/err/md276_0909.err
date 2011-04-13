@@ -1,0 +1,26 @@
+                               MPS MDOT Error Log
+                            MPS MDOT VERSION = 11.00
+                             2010:270:20:56:14.000
+
+
+Error Log File:  /ehs/ofls/build/bin/mps/output/m276:0910/md276:0909.err
+
+
+ INFORMATIONAL GMT  2010:270:20:56:15.000 ; Message  191274 ; 
+               MDOT - MD_CONTNTY PROCESSING:  ESTABLISHING INITIAL CONDITIONS
+               FOR DETAILED OPERATIONS TIMELINE GENERATION IN CONTINUITY WITH
+               PREVIOUS DOT. CONTINUITY DOT FILE: /ehs/ofls/build/bin/mps/output/m270:0409/md270:0408.dot.
+               
+ CRITICAL      GMT  2010:270:20:56:19.000 ; Message  191325 ; 
+               MD_TRANSLATE. OVERRIDING CONTINUITY SYSTEM MOMENTUM. USER INPUT
+               IS: X-AXIS = -13.55; Y-AXIS = -26.03; Z-AXIS = 4.06 kg-m^2/sec.
+               
+ INFORMATIONAL GMT  2010:270:20:56:19.000 ; Message  191275 ; 
+               MDOT - MD_CONTNTY PROCESSING:  GENERATING DETAILED OPERATIONS
+               TIMELINE IN CONTINUITY WITH PREVIOUS DOT. CONTINUITY DOT FILE:
+               /ehs/ofls/build/bin/mps/output/m270:0409/md270:0408.dot.
+
+ Number of Informational messages generated = 2
+ Number of Warning messages generated       = 0
+ Number of Critical messages generated      = 9
+ Number of Fatal messages generated         = 0

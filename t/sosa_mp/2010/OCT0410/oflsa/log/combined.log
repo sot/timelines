@@ -1,0 +1,168 @@
+
+******************************************
+Fri Apr  8 11:44:35 GMT 2011
+******************************************
+
+----------------------------------------
+HISTORY UPDATE
+----------------------------------------
+
+Does the backstop history need to be updated? (y/n) 
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+IMPORT - ./CR276_0906.backstop
+----------------------------------------
+
+> Validating Timeline Report
+
+CLD File Sequence:
+CL276_0906.cld
+CL277_2006.cld
+CL279_1106.cld
+CL280_1806.cld
+CL282_0306.cld
+CL283_1206.cld
+
+
+0 commands did not match
+0 SCS step numbers did not match
+0 SCS numbers did not match
+.tlr file commands = 6843, .cld commands = 6843
+
+[PASS] validate
+
+> Inverting Timeline Report
+
+Loading Command Field Database...
+Detected High bit via addition
+
+[PASS] invert
+
+> Validating Times
+
+Searching for continuity prior to 2010276.095511417
+Input Reference Time: VCDU 16004608 = GMT 2010238.113715184
+[PASS] Continuity Search
+
+
+1192 Times Processed
+Max: -0.0455000400543213 secs
+Av:  -0.186779984491784 secs
+Min: -0.325999975204468 secs
+
+[PASS] timecheck
+
+> History Check
+
+History files are current up to   2010276.035259913
+The first backstop record time is 2010276.095511417
+
+[PASS] historycheck
+
+>> IMPORT COMPLETE
+
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+SPLIT CHECKS
+----------------------------------------
+
+> Command Categorization Check
+
+
+[PASS] cmdcatcheck
+
+> Synchronization Check
+
+
+[PASS] synccheck
+
+>> SPLIT CHECKS COMPLETE
+
+
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
+
+----------------------------------------
+EXPORT - ./CR276_0906.backstop
+----------------------------------------
+
+> Generating Reports
+[ OK ] Spacecraft State Report: ./output/RPT_state_byatt_CR276_0906.txt
+[ OK ] Spacecraft State Report: ./output/RPT_state_bycomm_CR276_0906.txt
+[ OK ] Maneuver Constraint Check Input: ./output/MNVR_SUMMARY_CR276_0906.txt
+
+> Running Tests
+[PASS] acacheck
+[PASS] mechcheck
+[PASS] acispkt
+[PASS] lonenpm
+[PASS] cmdcheck
+[PASS] iumodecheck
+[PASS] dither
+[PASS] nmmdurationcheck
+[PASS] unloadcheck
+[ N/A] eclipsecheck
+
+>>> ALL TESTS PASSED <<<
+
+----------------------------------------
+GREP
+----------------------------------------
+
+[ OK ] Created ./output/NPM_check.txt
+[ OK ] Created ./output/RMP_check.txt
+[ OK ] Created ./output/SPM_check.txt
+[ OK ] Created ./output/UNLOAD_check.txt
+
+>> GREP COMPLETE
+
+----------------------------------------
+FOT CHECKLIST CREATION
+----------------------------------------
+
+[ OK ] FOT Checklist Generation
+
+>> EXPORT COMPLETE
+
+
+----------------------------------------
+./output DIRECTORY LISTING
+----------------------------------------
+
+MNVR_SUMMARY_CR276_0906.txt	 TEST_dither.txt
+NPM_check.txt			 TEST_eclipsecheck.txt
+RMP_check.txt			 TEST_iumodecheck.txt
+RPT_state_byatt_CR276_0906.txt	 TEST_lonenpm.txt
+RPT_state_bycomm_CR276_0906.txt  TEST_mechcheck.txt
+SPM_check.txt			 TEST_nmmdurationcheck.txt
+TEST_acacheck.txt		 TEST_unloadcheck.txt
+TEST_acispkt.txt		 UNLOAD_check.txt
+TEST_cmdcheck.txt
+
+----------------------------------------
+. DIRECTORY LISTING
+----------------------------------------
+C276_0900.trp	     fot
+CL276_0906.cld	     FOT_Load_Review_Checklist_OCT0410W.txt
+CL277_2006.cld	     log
+CL279_1106.cld	     mps
+CL280_1806.cld	     output
+CL282_0306.cld	     README-COPY-IF-DIR-REPLACED.txt
+CL283_1206.cld	     sausage
+CR276_0906.backstop  vehicle
+CR276_0906.tlr
+
+****************************************
+backstop COMPLETE - ./CR276_0906.backstop
+****************************************
+
+----------------------------------------
+Would you like to proceed? (y/n) 
+----------------------------------------
