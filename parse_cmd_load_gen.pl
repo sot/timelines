@@ -26,7 +26,7 @@ use Data::Dumper;
 my $SKA = $ENV{SKA} || '/proj/sot/ska';
 my $task = 'timelines';
 my $SKA_DATA = "${SKA}/data/${task}";
-my $MP_DIR = "${SKA_DATA}/mp/";
+my $MP_DIR = "/data/mpcrit1/mplogs/";
 
 my %opt = ( touch_file => "${SKA_DATA}/sum_files.touch",
 	    mp_dir => $MP_DIR,
@@ -159,7 +159,7 @@ sub update_for_file{
 	    my $delete = qq( delete from tl_built_loads where year = $load_ref->{year} 
 			     and load_segment = "$load_ref->{load_segment}" 
 			     and file = "$filename"
-                             and load_scs = "$load_ref->{load_scs}"
+                             and load_scs = $load_ref->{load_scs}
 			     and sumfile_modtime = $week->{sumfile_modtime} );
 	    sql_do( $load_handle, $delete);
 	    sql_insert_hash( $load_handle, 'tl_built_loads', $load_ref );
