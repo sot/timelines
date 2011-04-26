@@ -20,10 +20,14 @@ def get_options():
                       help="only grab timelines and load_segments after tstart")
     parser.add_option("--tstop",
                       help="only grab timelines and load_segments before tstop")
+    parser.add_option("--dbi",
+                      default='sqlite')
     parser.add_option("--server",
                       default='db_base.db3',
                       help="DBI server (<filename>|sybase)")
     parser.add_option("--verbose",
+                      action="store_true")
+    parser.add_option('--wipe',
                       action="store_true")
     opt, args = parser.parse_args()
     return opt, args
@@ -33,19 +37,34 @@ def main():
 
     syb = Ska.DBI.DBI(dbi='sybase', user='aca_read', server='sybase', database='aca',
                       numpy=False, verbose=opt.verbose)
-	
-    db = Ska.DBI.DBI(dbi='sqlite', server=opt.server, numpy=False, verbose=opt.verbose)
 
-    for drop in ('VIEW timeline_loads', 'TABLE timelines', 'TABLE load_segments',
-                 'TABLE cmd_fltpars', 'TABLE cmd_intpars', 'TABLE cmds',
-                 'TABLE cmd_states',
-                 'TABLE tl_processing', 'TABLE tl_built_loads', 'TABLE tl_obsids',
+    db = Ska.DBI.DBI(dbi=opt.dbi, server=opt.server, user='aca_test', database='aca_tstdb',
+                     numpy=False, verbose=opt.verbose)
+
+    for truncate in (
+        'TABLE cmd_states',
+                     'TABLE cmd_intpars', 'TABLE cmd_fltpars', 'TABLE cmds',
+                     'TABLE timelines', 'TABLE load_segments',
+                     'TABLE tl_processing', 'TABLE tl_built_loads', 'TABLE tl_obsids'):
+
+        try:
+            db.execute('TRUNCATE %s' % truncate)
+        except:
+            if opt.verbose:
+                print '%s not found' % truncate
+                     
+
+    for drop in ('VIEW timeline_loads',
                  'TRIGGER fkd_load_segment_id' ,
                  'TRIGGER fkd_timeline_id_cmds' ,
                  'TRIGGER fkd_timeline_id_cmd_fltpars' ,
                  'TRIGGER fkd_timeline_id_cmd_intpars' ,
                  'TRIGGER fkd_cmd_id_cmd_fltpars',
-                 'TRIGGER fkd_cmd_id_cmd_intpars'):
+                 'TRIGGER fkd_cmd_id_cmd_intpars',
+                 'TABLE cmd_states',
+                 'TABLE cmd_intpars', 'TABLE cmd_fltpars', 'TABLE cmds',
+                 'TABLE timelines', 'TABLE load_segments',
+                 'TABLE tl_processing', 'TABLE tl_built_loads', 'TABLE tl_obsids'):
 
         try:
             db.execute('DROP %s' % drop)
@@ -54,11 +73,14 @@ def main():
                 print '%s not found' % drop
             
 
+    if opt.wipe:
+        # just delete
+        return
     # use local versions of the files in this project and the SKA versions of others
     for sqldef in ('load_segments', 'timelines', 'timeline_loads', 'tl_dep',
+                   os.path.join(SKA, 'data', 'cmd_states', 'cmds'),
                    os.path.join(SKA, 'data', 'cmd_states', 'cmd_fltpars'),
                    os.path.join(SKA, 'data', 'cmd_states', 'cmd_intpars'),
-                   os.path.join(SKA, 'data', 'cmd_states', 'cmds'),
                    os.path.join(SKA, 'data', 'cmd_states', 'cmd_states'),
                    ):
         cmd = file(sqldef + '_def.sql').read()
@@ -68,7 +90,8 @@ def main():
     #trigger_cmds = file('sqlite_triggers.sql').read()
     #db.execute(trigger_cmds, commit=True)
     from Ska.Shell import bash
-    bash("sqlite3 %s < sqlite_triggers.sql" % opt.server, )
+    if (opt.dbi == 'sqlite'):
+        bash("sqlite3 %s < sqlite_triggers.sql" % opt.server, )
     
 
     if opt.tstart:

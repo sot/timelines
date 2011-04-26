@@ -18,7 +18,9 @@ import update_load_seg_db
 
 err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
-
+DBI = 'sybase'
+#DBI = 'sqlite'
+SKA = os.environ['SKA']
 
 #### actual tests.
 def test_loads():
@@ -62,6 +64,7 @@ def test_loads():
         f.description = "%s does not match %s states" % (load_rdb, state_file)
         yield(f,)
 
+
     # *INCORRECT* fiducial states to check failure
     #bad = [dict(loads='t/july_broken.rdb',
     #            states='t/july_broken.dat')]
@@ -88,24 +91,25 @@ def make_states( load_rdb ):
 
     outdir = re.sub(r'\.rdb$', '', load_rdb)
     if os.path.exists(outdir):
-        clean_states(outdir)
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
+
     os.makedirs(outdir)
         
     (outdir, load_dir, mp_dir) = data_setup( load_rdb, outdir=outdir )
-    dbfilename = os.path.join( outdir, 'test.db3')
-    make_table( dbfilename )
-    populate_states( outdir, load_dir, mp_dir, dbfilename )
-    err.write("Made Test States in %s\n" % outdir )
-    return (outdir, dbfilename)
+    if DBI == 'sqlite':
+        dbfilename = os.path.join( outdir, 'test.db3')
+        set_tables( dbfile=dbfilename )
+        populate_states( outdir, load_dir, mp_dir, dbfile=dbfilename )
+        err.write("Made Test States in %s\n" % outdir )
+        return (outdir, dbfilename)
+    else:
+        set_tables(wipe=True)
+        set_tables()
+        populate_states( outdir, load_dir, mp_dir)
+        err.write("Made Test States in database\n")
+        return (outdir, None)
 
-def clean_states( outdir ):
-    """
-    completely delete testing directory
-
-    :param outdir: testing directory
-    """
-    shutil.rmtree( outdir )
-    err.write("Deleted output directory %s\n" % outdir )
 
 def check_loads( load_rdb, state_file, expect_match=True):
     """
@@ -119,7 +123,12 @@ def check_loads( load_rdb, state_file, expect_match=True):
 
     # make new states from load segments
     (outdir, dbfilename) = make_states(load_rdb )
-    test_states = text_states( load_rdb, dbfilename)
+    if DBI == 'sybase':
+        testdb = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_test', database='aca_tstdb')
+    else:
+        testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfilename)
+
+    test_states = text_states( load_rdb, db=testdb)
     ts = open( os.path.join(outdir, 'test_states.dat'), 'w')
     ts.writelines(test_states)
     ts.close()
@@ -140,11 +149,20 @@ def check_loads( load_rdb, state_file, expect_match=True):
     if expect_match:
         assert len(difflines) == 0 
         err.write("Checked Loads from %s\n" % load_rdb )
-        clean_states(outdir)    
+        set_tables(wipe=True)
     else:
         assert len(difflines) != 0 
         err.write("Expected mismatch in Loads from %s\n" % load_rdb )
-        clean_states(outdir)    
+        set_tables(wipe=True)
+
+    try:
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
+    except OSError:
+        err.write("Passed test, but failed to delete dir %s" % outdir)
+
+
+
 
 def test_load_to_dir():
     good = [dict(weekabr='NOV2408C',
@@ -258,9 +276,9 @@ def data_setup( load_rdb, outdir=tempfile.mkdtemp(),
 
     return ( outdir, os.path.join(outdir, 'loads'), os.path.join(outdir, 'mp'))
 
-def make_table( dbfilename, tstart=None, tstop=None):
+def set_tables( wipe=False, dbfile=None, tstart=None, tstop=None):
     """ 
-    Initialize tables
+    Initialize tables or delete them
 
     Use the make_new_tables script to initialize new tables and copy over rows from the 
     "real" sybase tables as needed.
@@ -268,18 +286,43 @@ def make_table( dbfilename, tstart=None, tstop=None):
     :param dbfilename: sqlite destination db file
     :param tstart: start of range to copy from sybase
     :param tstart: stop of range to copy from sybase
-
+    :param wipe: just delete the tables
     """
-    if not os.path.exists( dbfilename ):
-        make_new_tables = os.path.join('./make_new_tables.py')
-        cmd = "%s --server %s " % ( make_new_tables, dbfilename )
-        if tstart:
-            cmd += " --tstart %s " % DateTime(tstart).date
-        if tstop:
-            cmd += " --tstop %s " % DateTime(tstop).date
-        bash(cmd)
+    make_new_tables = os.path.join('./make_new_tables.py')
+    if wipe:
+        make_new_tables += " --wipe "
 
-def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=None, verbose=False ):
+    if DBI == 'sybase':
+        from Sybase import ProgrammingError
+        testdb = Ska.DBI.DBI(dbi='sybase', server='sybase',
+                             user='aca_test', database='aca_tstdb')
+        db_str = " --dbi sybase --server sybase "
+        #try:
+        #    testdb.fetchone("select count(*) from cmd_states where 1=0")
+        #    if 
+        #    return
+        #except ProgrammingError as exc:
+        #    raise ValueError
+        #    if re.search("cmd_states not found", exc.message):
+        #        pass
+    else:
+        db_str = " --server %s " % dbfile
+        #if os.path.exists( dbfile):    
+        #    return
+
+    cmd = "%s %s" % (make_new_tables, db_str)
+    
+    if tstart:
+        cmd += " --tstart %s " % DateTime(tstart).date
+    if tstop:
+        cmd += " --tstop %s " % DateTime(tstop).date
+
+    err.write("%s \n" % cmd)
+    bash(cmd)
+
+
+def populate_states( outdir, load_seg_dir, mp_dir, dbi=DBI, dbfile=None,
+                     nonload_cmd_file=None, verbose=False ):
     """
     From the available directories and load segment file
     Populate a load segments table and a timelines table
@@ -295,16 +338,24 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
 
     """
 
+    if DBI == 'sybase':
+        testdb = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_test', database='aca_tstdb')
+        db_str = " --dbi sybase --server sybase --user aca_test --database aca_tstdb "
+    else:
+        testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+        db_str = ' --server %s ' % dbfile
+
     parse_cmd = os.path.join('./parse_cmd_load_gen.pl')
-    parse_cmd_str = ( '%s --touch_file %s --mp_dir %s --server %s' %
-                      ( parse_cmd, os.path.join( outdir, 'clg_touchfile'), mp_dir, dbfilename ))
+    parse_cmd_str = ( '%s %s --touch_file %s --mp_dir %s ' %
+                      ( parse_cmd, db_str, os.path.join( outdir, 'clg_touchfile'), mp_dir))
+
     #err.write(parse_cmd_str + "\n")
     bash(parse_cmd_str)
     #    update_load_seg_db.main(load_seg_dir, test=True, server=dbfilename,
     #                     verbose=True, dryrun=False)
     update_load_seg = os.path.join('./update_load_seg_db.py')
-    load_seg_cmd_str = ( "%s --test --server %s --loadseg_rdb_dir '%s'" %
-                            ( update_load_seg, dbfilename, load_seg_dir ))
+    load_seg_cmd_str = ( "%s %s --test --loadseg_rdb_dir '%s'" %
+                            ( update_load_seg, db_str, load_seg_dir ))
     #err.write(load_seg_cmd_str + "\n")
     load_seg_output = bash(load_seg_cmd_str)
 
@@ -314,7 +365,6 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
     # so copy over states from the real db, starting at the start of this
     # timelines timerange until we hit first NPNT state
     # and use the time just after that state as the start of update_cmd_states
-    testdb = Ska.DBI.DBI(dbi='sqlite', server=dbfilename, verbose=verbose )
     first_timeline = testdb.fetchone("select datestart from timelines")
 
     acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=verbose)
@@ -325,12 +375,15 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
 
     from itertools import izip, count
     for state, scount in izip(acadb.fetch(es_query), count()):
-        testdb.insert( state, 'cmd_states', replace=True )
+        testdb.execute("delete from cmd_states where datestart = '%s'"
+                       % state['datestart'])
+        testdb.insert( state, 'cmd_states' )
         if state['pcad_mode'] == 'NPNT':
             break
     
 
-    cmd_state_mxstart = DateTime( state['datestop'] ).mxDateTime + mx.DateTime.TimeDelta( seconds=1 ) 
+    cmd_state_mxstart = ( DateTime( state['datestop'] ).mxDateTime
+                          + mx.DateTime.TimeDelta( seconds=1) ) 
     cmd_state_datestart = DateTime(cmd_state_mxstart).date
 
     #fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
@@ -338,16 +391,18 @@ def populate_states( outdir, load_seg_dir, mp_dir, dbfilename, nonload_cmd_file=
 
     #print "Adding Nonload Commands"
     if nonload_cmd_file is None:
-        nonload_cmd_file = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'nonload_cmds_archive.py')
-    bash("%s --server %s " % (nonload_cmd_file, dbfilename ))
+        nonload_cmd_file = os.path.join(os.environ['SKA'], 'share',
+                                        'cmd_states', 'nonload_cmds_archive.py')
+    bash("%s %s " % (nonload_cmd_file, db_str ))
 
-    update_cmd_states = os.path.join(os.environ['SKA'], 'share', 'cmd_states', 'update_cmd_states.py')
+    update_cmd_states = os.path.join(os.environ['SKA'], 'share',
+                                     'cmd_states', 'update_cmd_states.py')
     #err.write("Running %s --datestart '%s' --server %s --mp_dir %s \n" %
     #          (update_cmd_states, cmd_state_datestart, dbfilename, mp_dir))              
-    bash( "%s --datestart '%s' --server %s --mp_dir %s" %
-          (update_cmd_states, cmd_state_datestart, dbfilename, mp_dir))
+    bash( "%s %s --datestart '%s' --mp_dir %s" %
+          (update_cmd_states, db_str, cmd_state_datestart, mp_dir))
 
-    return dbfilename
+    return
 
 def string_states( states):
     """
@@ -377,7 +432,7 @@ def string_states( states):
     statestring = Ska.Numpy.pformat(newstates, fmt)
     return statestring.splitlines(True)
     
-def text_states( load_rdb, dbfile ):
+def text_states( load_rdb, db):
     """
     Fetch states and return as a string
 
@@ -390,19 +445,19 @@ def text_states( load_rdb, dbfile ):
     datestart = loads[0]['TStart (GMT)']
     datestop = loads[-1]['TStop (GMT)']
 
-    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True )
     test_states = db.fetchall("""select * from cmd_states
                             where datestart >= '%s'
                             and datestart <= '%s'
                             order by datestart""" % (datestart, datestop ))
     test_lines = string_states( test_states )
     return test_lines
-def text_cmds( load_rdb, dbfile):
+
+def text_cmds( load_rdb, db):
     loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
     datestart = loads[0]['TStart (GMT)']
     datestop = loads[-1]['TStop (GMT)']
 
-    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=False )
+
     timelines = db.fetchall("""select * from timelines
                                     where datestart >= '%s'
                                     and datestop <= '%s'
@@ -412,14 +467,22 @@ def text_cmds( load_rdb, dbfile):
                             and date <= '%s'
                             and timeline_id is NULL
                             order by date""" % (datestart, datestop ))
+
+    try:
+        cmds = cmds.tolist()
+    except AttributeError:
+        pass
     for tl in timelines:
         tl_cmds = db.fetchall("""select * from cmds
                                  where timeline_id = %d
                                  and date >= '%s'
                                  and date <= '%s'
                                  order by date""" % (tl['id'], tl['datestart'], tl['datestop']))
-        cmds.extend(tl_cmds)
-    cmds = sorted(cmds, key=lambda x: x['date'])
+        if len(tl_cmds):
+            colnames = tl_cmds.dtype.names
+            cmds.extend(tl_cmds.tolist())
+    cmds = sorted(cmds, key=lambda x: x[3])
+    cmds = np.rec.fromrecords( cmds, names=colnames)
     test_lines = ["id\ttimeline_id\tdate\tcmd\ttlmsid\tmsid\tscs\n"]
     for cmd in cmds:
         test_lines.append("%d\t%s\t%s\t%s\t%s\t%s\t%s\n" %
@@ -677,14 +740,28 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
-def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska='/proj/sot/ska'):
-        
-    err.write("Running nsm 2010 simulation \n" )
+def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
+
     # Simulate timelines and cmd_states around day 150 NSM
-    dbfilename = os.path.join(outdir, 'test.db3')
+
+    err.write("Running nsm 2010 simulation \n" )
+
+    if DBI == 'sybase':
+        db_str = " --dbi sybase --server sybase --user aca_test --database aca_tstdb "
+    else:
+        dbfile = os.path.join(outdir, 'test.db3')
+        db_str = ' --server %s ' % dbfile
+
     if os.path.exists(outdir):
-        clean_states(outdir)
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
     os.makedirs(outdir)
+    if DBI == 'sybase':
+        set_tables(wipe=True)
+        set_tables()
+    else:
+        set_tables(dbfile=dbfile)
+
 
     # use a clone of the load_segments "time machine"
     tm = 'iFOT_time_machine'
@@ -721,63 +798,78 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska='/proj/sot/ska'):
         # set up rest of testing components around that load_segment file
         (outdir, load_dir, mp_dir) = data_setup( load_rdb,
                                                  outdir=outdir )
-        if not os.path.exists(dbfilename):
-            make_table( dbfilename )
 
         # run the interrupt commanding before running the rest of the commands
         # if the current time is the first simulated cron pass after the
         # actual insertion of the interrupt commands
         dtime = ifot_time - int_time
         if dtime.hours >= 0 and dtime.hours < step:
-            print "Performing interrupt"
-            bash_shell("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-                       + " --dbi=sqlite --cmd-set nsm "
+            err.write( "Performing interrupt \n")
+            nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+                       + " --cmd-set nsm "
                        + " --date '%s'" % DateTime(int_time).date
                        + " --interrupt "
                        + " --archive-file %s/nonload_cmds_archive.py " % outdir
-                       + " --server %s/test.db3" % outdir )
+                       + db_str)
+            err.write(nsm_cmd + "\n")
+            bash_shell(nsm_cmd)
 
-            bash_shell("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-                       + " --dbi=sqlite --cmd-set scs107 "
+            scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+                       + " --cmd-set scs107 "
                        + " --date '%s'" % DateTime(int_time).date
                        + " --interrupt "
                        + " --archive-file %s/nonload_cmds_archive.py " % outdir
-                       + " --server %s/test.db3" % outdir )
-
-
-        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
-        # update_load_seg_db.py, update_cmd_states.py
-        populate_states( outdir, load_dir, mp_dir, dbfilename,
-                         "%s/nonload_cmds_archive.py" % outdir)
+                       + db_str)
+            err.write(scs_cmd + "\n")
+            bash_shell(scs_cmd)
 
         prefix = DateTime(ifot_time).date + '_'
-        text_files = output_text_files( load_rdb, dbfilename, outdir, prefix=prefix)
+        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
+        # update_load_seg_db.py, update_cmd_states.py
+
+        if DBI == 'sybase':
+            populate_states( outdir, load_dir, mp_dir, 
+                             nonload_cmd_file = "%s/nonload_cmds_archive.py" % outdir)
+            text_files = output_text_files( load_rdb, outdir, prefix=prefix)
+        else:
+            populate_states( outdir, load_dir, mp_dir, dbfile=dbfile,
+                             nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+            text_files = output_text_files( load_rdb, outdir,
+                                            dbfile=dbfile, prefix=prefix)
+
         for type in ('timelines', 'states'):
             f = partial( text_compare, text_files[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
             f.description = "%s doesn't match %s for %s" % (text_files[type],
                                                             't/%sfid_%s.dat' % (prefix, type), type)
             yield(f,)
 
+
+    set_tables(wipe=True)
     try:
-        clean_states(outdir)
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
     except OSError:
         err.write("Passed all tests, but failed to delete dir %s\n" % outdir)
 
-def output_text_files( load_rdb, dbfilename, outdir, prefix=''):
+def output_text_files( load_rdb, outdir, dbfile=None, prefix=''):
     
-    dbh = Ska.DBI.DBI(dbi='sqlite',server=dbfilename)
+    if DBI == 'sybase':
+        dbh = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_test', database='aca_tstdb')
+    else:
+        dbh = Ska.DBI.DBI(dbi='sqlite',server=dbfile)
+
     timelines = dbh.fetchall("select * from timelines")
     test_timelines = string_timelines(timelines)
     tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
     tl = open( tfile, 'w')
     tl.writelines(test_timelines)
     tl.close()
-    test_states = text_states( load_rdb, dbfilename )
+    test_states = text_states( load_rdb, dbh )
     sfile = os.path.join( outdir, prefix+'test_states.dat')
     ts = open( sfile, 'w')
     ts.writelines(test_states)
     ts.close()
-    test_cmds = text_cmds( load_rdb, dbfilename )
+    test_cmds = text_cmds( load_rdb, dbh )
     cfile =  os.path.join( outdir, prefix+'test_cmds.dat')
     tc = open( cfile, 'w')
     tc.writelines(test_cmds)
@@ -820,10 +912,16 @@ def test_sosa(outdir='t/sosa_new_plus_cmds', cmd_state_ska=os.environ['SKA']):
         
     err.write("Running sosa 2010 simulation \n" )
     # Simulate timelines and cmd_states around day 150 NSM
-    dbfilename = os.path.join(outdir, 'test.db3')
     if os.path.exists(outdir):
-        clean_states(outdir)
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
     os.makedirs(outdir)
+
+    if DBI == 'sybase':
+        db_str = " --dbi sybase --server sybase --user aca_test --database aca_tstdb "
+    else:
+        dbfile = os.path.join(outdir, 'test.db3')
+        db_str = ' --server %s ' % dbfile
 
     # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
     shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
@@ -837,24 +935,31 @@ def test_sosa(outdir='t/sosa_new_plus_cmds', cmd_state_ska=os.environ['SKA']):
     shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
     mp_dir = os.path.join(outdir, 'mp')
     
-    # set up rest of testing components around that load_segment file
-    if not os.path.exists(dbfilename):
-        make_table( dbfilename )
+    if DBI == 'sybase':
+        set_tables(wipe=True)
+        set_tables()
+    else:
+        set_tables(dbfile=dbfile)
 
-    populate_states( outdir, load_dir, mp_dir, dbfilename,
-                     "%s/nonload_cmds_archive.py" % outdir)
 
-    
-    # write out the timelines, states, and cmds 
     prefix = 'sosa_pre_'
-    test_text = output_text_files(load_rdb, dbfilename, outdir, prefix=prefix)
+    if DBI == 'sybase':
+        populate_states( outdir, load_dir, mp_dir, 
+                         nonload_cmd_file = "%s/nonload_cmds_archive.py" % outdir)
+        text_files = output_text_files( load_rdb, outdir, prefix=prefix)
+    else:
+        populate_states( outdir, load_dir, mp_dir, dbfile=dbfile,
+                         nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+        text_files = output_text_files( load_rdb, outdir,
+                                        dbfile=dbfile, prefix=prefix)
+
     for type in ('timelines', 'states', 'cmds'):
-        f = partial( text_compare, test_text[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
-        f.description = "%s doesn't match %s for %s" % (test_text[type],
+        f = partial( text_compare, text_files[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
+        f.description = "%s doesn't match %s for %s" % (text_files[type],
                                                         't/%sfid_%s.dat' % (prefix, type), type)
         yield(f,)
 
-    shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
+    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
     
 
     # a time for the interrupt (chosen in the middle of a segment)
@@ -864,34 +969,39 @@ def test_sosa(outdir='t/sosa_new_plus_cmds', cmd_state_ska=os.environ['SKA']):
     # if the current time is the first simulated cron pass after the
     # actual insertion of the interrupt commands
     #print "Performing SCS107 interrupt"
-    interrupt_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --dbi=sqlite --cmd-set scs107 "
+    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+               + " --cmd-set scs107 "
                + " --date '%s'" % DateTime(int_time).date
                + " --interrupt_observing "
                + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + " --server %s/test.db3" % outdir )
-    #err.write(interrupt_cmd + "\n")
-    bash_shell(interrupt_cmd)
+               + db_str)
+    err.write(scs_cmd + "\n")
+    bash_shell(scs_cmd)
 
-    # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
-    # update_load_seg_db.py, update_cmd_states.py
-    populate_states( outdir, load_dir, mp_dir, dbfilename,
-                     "%s/nonload_cmds_archive.py" % outdir)
-    
-    # write out the timelines and states after the tasks are complete
     prefix = 'sosa_post_'
-    test_text = output_text_files(load_rdb, dbfilename, outdir, prefix=prefix)
+    if DBI == 'sybase':
+        populate_states( outdir, load_dir, mp_dir, 
+                         nonload_cmd_file = "%s/nonload_cmds_archive.py" % outdir)
+        text_files = output_text_files( load_rdb, outdir, prefix=prefix)
+    else:
+        populate_states( outdir, load_dir, mp_dir, dbfile=dbfile,
+                         nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+        text_files = output_text_files( load_rdb, outdir,
+                                        dbfile=dbfile, prefix=prefix)
+
     for type in ('timelines', 'states', 'cmds'):
-        f = partial( text_compare, test_text[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
-        f.description = "%s doesn't match %s for %s" % (test_text[type],
+        f = partial( text_compare, text_files[type], 't/%sfid_%s.dat' % (prefix, type), outdir, type)
+        f.description = "%s doesn't match %s for %s" % (text_files[type],
                                                         't/%sfid_%s.dat' % (prefix, type), type)
         yield(f,)
-        
-    shutil.copyfile( dbfilename, os.path.join(outdir, 'db_post_interrupt.db3'))
+
+#    shutil.copyfile( dbfilename, os.path.join(outdir, 'db_post_interrupt.db3'))
 
 
     # if we didn't fail an assert, remove the testing directory
+    set_tables(wipe=True)
     try:
-        clean_states(outdir)
+        shutil.rmtree( outdir )
+        err.write("Deleted output directory %s\n" % outdir )
     except OSError:
         err.write("Passed all tests, but failed to delete dir %s" % outdir)
