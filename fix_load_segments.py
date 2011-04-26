@@ -67,4 +67,23 @@ def repair(ifot_loads):
                                            )
             ifot_loads = new_ifot
 
+    # 2011 CL103:2002 is missing, interrupted by  the APR1311 replan
+    cmd_date = '2011:103:20:40:00.000'
+
+    if ((ifot_loads[0].datestart <= cmd_date) and (ifot_loads[-1].datestart > cmd_date)):
+        if np.flatnonzero((ifot_loads.load_segment == 'CL103:2002') &
+                          (ifot_loads.year == 2011)):
+            pass
+        else:
+            rec_tuple = ( 'CL103:2002', 2011,
+                         '2011:103:20:40:00.000', '2011:103:22:57:00.000', 129, 1)
+            ifot_list = ifot_loads.tolist()
+            ifot_list.append(rec_tuple)
+            ifot_list.sort(lambda x,y: cmp(x[2],y[2]))
+            new_ifot = np.rec.fromrecords( ifot_list,
+                                           dtype=ifot_loads.dtype,
+                                           )
+            ifot_loads = new_ifot
+
+
     return ifot_loads
