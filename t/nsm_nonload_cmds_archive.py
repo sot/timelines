@@ -14,12 +14,17 @@ def get_options():
     parser.add_option("--server",
                       default='db_base.db3',
                       help="DBI server (<filename>|sybase)")
+    parser.add_option("--user",
+                      default='aca_ops')
+    parser.add_option("--database",
+                      default='aca')
     opt, args = parser.parse_args()
     return opt, args
 
 opt, args = get_options()
 
-db = Ska.DBI.DBI(dbi=opt.dbi, server=opt.server)
+db = Ska.DBI.DBI(dbi=opt.dbi, server=opt.server,
+                 user=opt.user, database=opt.database)
 
 # Drop all existing non-load commands
 for table in ('cmd_intpars', 'cmd_fltpars', 'cmds'):
@@ -154,4 +159,3 @@ for date in dates.split('\n'):
 
 
 cmd_states.insert_cmds_db(cmds, None, db)
-
