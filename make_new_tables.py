@@ -25,11 +25,17 @@ def get_options():
     parser.add_option("--server",
                       default='db_base.db3',
                       help="DBI server (<filename>|sybase)")
+    parser.add_option("--user",
+                      default='aca_test')
+    parser.add_option("--database",
+                      default='aca_tstdb')
     parser.add_option("--verbose",
                       action="store_true")
     parser.add_option('--wipe',
                       action="store_true")
     opt, args = parser.parse_args()
+    if opt.user == 'aca_ops' or opt.database == 'aca':
+        raise ValueError("make_new_tables should not be used on flight tables (user != aca_ops, database != aca)")
     return opt, args
 
 def main():
@@ -37,8 +43,7 @@ def main():
 
     syb = Ska.DBI.DBI(dbi='sybase', user='aca_read', server='sybase', database='aca',
                       numpy=False, verbose=opt.verbose)
-
-    db = Ska.DBI.DBI(dbi=opt.dbi, server=opt.server, user='aca_test', database='aca_tstdb',
+    db = Ska.DBI.DBI(dbi=opt.dbi, server=opt.server, user=opt.user, database=opt.database,
                      numpy=False, verbose=opt.verbose)
 
     for truncate in (
