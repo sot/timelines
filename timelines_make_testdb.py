@@ -33,7 +33,7 @@ def get_options():
 
 def main():
     """
-    Runs timelines_test.data_setup for a standard configuration where the
+    Runs timelines_test.make_states for a standard configuration where the
     operations shall create a test.db3 file in the specified outdir for the
     supplied load segments in the --load_rdb file
     
@@ -42,12 +42,7 @@ def main():
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
-    (outdir, load_dir, mp_dir) = timelines_test.data_setup( opt.load_rdb, 
-                                                                 outdir=outdir )
-    if not os.path.exists(dbfilename):
-        timelines_test.make_table( dbfilename )
-
-    timelines_test.populate_states( outdir, load_dir, mp_dir, dbfilename, verbose=opt.verbose)
+    s = timelines_test.make_states(opt.load_rdb, outdir=outdir, dbi='sqlite')
 
 if __name__ == '__main__':
     main()
