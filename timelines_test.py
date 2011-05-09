@@ -476,16 +476,16 @@ def check_load(load_rdb, state_file, expect_match=True):
     s.cleanup()
 
 
-def make_states(load_rdb):
+def make_states(load_rdb, dbi=DBI, outdir=None):
     """
     Setup db and states in a temp directory for quick nose testing
 
     :param load_rdb: file with load segments
     :rtype: (outdir, dbfilename)
     """
-
-    outdir = re.sub(r'\.rdb$', '', load_rdb)
-    s = Scenario(outdir)
+    if not outdir:
+        outdir = re.sub(r'\.rdb$', '', load_rdb)
+    s = Scenario(outdir, dbi=dbi)
     s.load_rdb = load_rdb
     s.data_setup()
     s.db_setup()
@@ -873,66 +873,65 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
 
 
 
-#def run_model(opt, dbfile):
-#    """
-#    Run the psmc twodof model for given states from a sqlite dbfile
-#
-#    :param opt: cmd line options opt.load_rdb, opt.verbose, opt.outdir
-#    :param dbfile: sqlite3 filename
-#    :rtype: dict of just about everything
-#    """
-#
-#    import Ska.Table
-#
-#    loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
-#    datestart = loads[0]['TStart (GMT)']
-#    datestop = loads[-1]['TStop (GMT)']
-#
-#    db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, numpy=True, verbose=opt.verbose )
-#    # Add psmc dirs
-#    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
-#    sys.path.append(psmc_dir)
-#    import Chandra.cmd_states as cmd_states
-#    import Ska.TelemArchive.fetch
-#    import numpy as np
-#    states = db.fetchall("""select * from cmd_states
-#                            where datestart >= '%s'
-#                            and datestart <= '%s'
-#                            order by datestart""" % (datestart, datestop ))
-#    colspecs = ['1pdeaat', '1pin1at',
-#                'tscpos', 'aosares1',
-#                '1de28avo', '1deicacu',
-#                '1dp28avo', '1dpicacu',
-#                '1dp28bvo', '1dpicbcu']
-#
-#    print "Fetching from %s to %s" % ( states[0]['datestart'], states[-2]['datestart'])
-#    colnames, vals = Ska.TelemArchive.fetch.fetch( start=states[0]['datestart'],
-#                                                   stop=states[-2]['datestart'],
-#                                                   dt=32.8,
-#                                                   colspecs=colspecs )
-#
-#    tlm = np.rec.fromrecords( vals, names=colnames )
-#    import psmc_check
-#    plots_validation = psmc_check.make_validation_plots( opt, tlm, db )
-#    valid_viols = psmc_check.make_validation_viols(plots_validation)
-#    import characteristics
-#    MSID = dict(dea='1PDEAAT', pin='1PIN1AT')
-#    YELLOW = dict(dea=characteristics.T_dea_yellow, pin=characteristics.T_pin_yellow)
-#    MARGIN = dict(dea=characteristics.T_dea_margin, pin=characteristics.T_pin_margin)
-#    proc = dict(run_user=os.environ['USER'],
-#                run_time=time.ctime(),
-#                errors=[],
-#                dea_limit=YELLOW['dea'] - MARGIN['dea'],
-#                pin_limit=YELLOW['pin'] - MARGIN['pin'],
-#                )
-#
-#    pred = dict(plots=None, viols=None, times=None, states=None, temps=None)  
-#    psmc_check.write_index_rst(opt, proc, plots_validation, valid_viols=valid_viols, 
-#                               plots=pred['plots'], viols=pred['viols'])
-#    psmc_check.rst_to_html(opt, proc)
-#    
-#    return dict(opt=opt, states=pred['states'], times=pred['times'],
-#                temps=pred['temps'], plots=pred['plots'],
-#                viols=pred['viols'], proc=proc, 
-#                plots_validation=plots_validation)
-#
+def run_model(opt, db):
+    """
+    Run the psmc twodof model for given states 
+
+    :param opt: cmd line options opt.load_rdb, opt.verbose, opt.outdir
+    :rtype: dict of just about everything
+    """
+
+    import Ska.Table
+
+    loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
+    datestart = loads[0]['TStart (GMT)']
+    datestop = loads[-1]['TStop (GMT)']
+
+
+    # Add psmc dirs
+    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
+    sys.path.append(psmc_dir)
+    import Chandra.cmd_states as cmd_states
+    import Ska.TelemArchive.fetch
+    import numpy as np
+    states = db.fetchall("""select * from cmd_states
+                            where datestart >= '%s'
+                            and datestart <= '%s'
+                            order by datestart""" % (datestart, datestop ))
+    colspecs = ['1pdeaat', '1pin1at',
+                'tscpos', 'aosares1',
+                '1de28avo', '1deicacu',
+                '1dp28avo', '1dpicacu',
+                '1dp28bvo', '1dpicbcu']
+
+    print "Fetching from %s to %s" % ( states[0]['datestart'], states[-2]['datestart'])
+    colnames, vals = Ska.TelemArchive.fetch.fetch( start=states[0]['datestart'],
+                                                   stop=states[-2]['datestart'],
+                                                   dt=32.8,
+                                                   colspecs=colspecs )
+
+    tlm = np.rec.fromrecords( vals, names=colnames )
+    import psmc_check
+    plots_validation = psmc_check.make_validation_plots( opt, tlm, db )
+    valid_viols = psmc_check.make_validation_viols(plots_validation)
+    import characteristics
+    MSID = dict(dea='1PDEAAT', pin='1PIN1AT')
+    YELLOW = dict(dea=characteristics.T_dea_yellow, pin=characteristics.T_pin_yellow)
+    MARGIN = dict(dea=characteristics.T_dea_margin, pin=characteristics.T_pin_margin)
+    proc = dict(run_user=os.environ['USER'],
+                run_time=time.ctime(),
+                errors=[],
+                dea_limit=YELLOW['dea'] - MARGIN['dea'],
+                pin_limit=YELLOW['pin'] - MARGIN['pin'],
+                )
+
+    pred = dict(plots=None, viols=None, times=None, states=None, temps=None)  
+    psmc_check.write_index_rst(opt, proc, plots_validation, valid_viols=valid_viols, 
+                               plots=pred['plots'], viols=pred['viols'])
+    psmc_check.rst_to_html(opt, proc)
+    
+    return dict(opt=opt, states=pred['states'], times=pred['times'],
+                temps=pred['temps'], plots=pred['plots'],
+                viols=pred['viols'], proc=proc, 
+                plots_validation=plots_validation)
+

@@ -35,9 +35,12 @@ def main():
     opt, args = get_options()
     outdir = opt.outdir
     dbfilename = os.path.join(outdir, 'test.db3')
-    model = timelines_test.run_model( opt, dbfilename )
-    timelines_test.cmp_states( opt, dbfilename )
-    timelines_test.cmp_timelines( opt, dbfilename )
+    import Ska.DBI
+    dbh = Ska.DBI.DBI(dbi='sqlite', server=dbfilename)
+    model = timelines_test.run_model( opt, dbh)
+
+    #timelines_test.cmp_states( opt, dbfilename )
+    #timelines_test.cmp_timelines( opt, dbfilename )
 
 if __name__ == '__main__':
     main()

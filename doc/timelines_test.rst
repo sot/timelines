@@ -7,17 +7,14 @@
 Functions
 ----------
 
-.. autofunction:: test_loads
 
 .. autofunction:: make_states
 
-.. autofunction:: check_loads
+.. autofunction:: run_model
 
-.. autofunction:: data_setup
 
-.. autofunction:: make_table
 
-.. autofunction:: populate_states
+
 
 
 
