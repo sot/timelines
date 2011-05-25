@@ -168,12 +168,14 @@ class Scenario(object):
     """
 
     def __init__(self, outdir, dbi=DBI):
-        self.outdir = outdir
-        self.dbi = dbi
-        self.db_initialized = False
-        self.load_rdb = None
-        self.mp_dir = None
-        self.load_dir = None
+        self.outdir = outdir # where to put everything
+        self.dbi = dbi # which dbi
+        self.db_initialized = False # have we created the tables
+        self.first_npnt_state = None # have we copied over the states before first NPNT and have a npnt state
+        self.run_at_time = None # if scenario used more than once in time, what is the pretend run time
+        self.load_rdb = None # load segment rdb file from iFOT
+        self.mp_dir = None # directory with load products tree
+        self.load_dir = None # directory with load segment rdb files
         if os.path.exists(outdir):
             shutil.rmtree(outdir)
             err.write("Pre-cleaned by deleting dir %s\n" % outdir)
@@ -326,30 +328,48 @@ class Scenario(object):
         # and use the time just after that state as the start of update_cmd_states
         first_timeline = testdb.fetchone("select datestart from timelines")
 
-        acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca',
-                            numpy=True, verbose=verbose)
-        es_query = """select * from cmd_states
-                      where datestop > '%s'
-                      order by datestart asc""" % first_timeline['datestart'] 
-        db_states = acadb.fetch(es_query)
 
-        from itertools import izip, count
-        for state, scount in izip(acadb.fetch(es_query), count()):
-            testdb.execute("delete from cmd_states where datestart = '%s'"
-                           % state['datestart'])
-            testdb.insert( state, 'cmd_states' )
-            if state['pcad_mode'] == 'NPNT':
-                break
+        if self.first_npnt_state is None:
+            acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca',
+                                numpy=True, verbose=verbose)
+            es_query = """select * from cmd_states
+                          where datestop > '%s'
+                          order by datestart asc""" % first_timeline['datestart'] 
+            db_states = acadb.fetch(es_query)
 
-        err.write("Copied %d states from flight table from %s to %s \n" % (
-            scount,
-            first_timeline['datestart'],
-            state['datestop']))
+            from itertools import izip, count
+            for state, scount in izip(acadb.fetch(es_query), count()):
+                testdb.execute("delete from cmd_states where datestart = '%s'"
+                               % state['datestart'])
+                testdb.insert( state, 'cmd_states' )
+                if state['pcad_mode'] == 'NPNT':
+                    break
 
+            err.write("Copied %d states from flight table from %s to %s \n" % (
+                scount + 1,
+                first_timeline['datestart'],
+                state['datestop']))
 
-        cmd_state_mxstart = ( DateTime( state['datestop'] ).mxDateTime
-                              + mx.DateTime.TimeDelta( seconds=1) ) 
-        cmd_state_datestart = DateTime(cmd_state_mxstart).date
+            cmd_state_mxstart = ( DateTime( state['datestop'] ).mxDateTime
+                                  + mx.DateTime.TimeDelta( seconds=1) ) 
+            cmd_state_datestart = DateTime(cmd_state_mxstart).date
+
+            self.first_npnt_state = state
+
+        else:
+            # after the database has been set up the first time,
+            # use run_at_time - 10 days (approximate the update_cmd_states.py default)
+            # unless the timelines don't go back a full ten days
+            if self.run_at_time is None:
+                raise ValueError("self.run_at_time must be defined")
+            run_mxstart = ( DateTime(self.run_at_time).mxDateTime
+                            - mx.DateTime.DateTimeDeltaFromDays(10) )
+            npnt_mxstart = DateTime(self.first_npnt_state['datestop']).mxDateTime
+            cmd_state_mxstart = ( max(npnt_mxstart,run_mxstart)
+                                  + mx.DateTime.TimeDelta( seconds=1) ) 
+            cmd_state_datestart = DateTime(cmd_state_mxstart).date
+            print cmd_state_datestart
+
 
         #fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
         #bash("%s --server %s " % (fix_timelines, dbfilename ))
@@ -363,10 +383,11 @@ class Scenario(object):
 
         update_cmd_states = os.path.join(os.environ['SKA'], 'share',
                                          'cmd_states', 'update_cmd_states.py')
-        err.write("Running %s %s --datestart '%s' --mp_dir %s \n" %
-                  (update_cmd_states, db_str, cmd_state_datestart, mp_dir))              
-        bash( "%s %s --datestart '%s' --mp_dir %s" %
-              (update_cmd_states, db_str, cmd_state_datestart, mp_dir))
+        cmd_state_cmd = "%s %s --datestart '%s' --mp_dir %s" % (
+            update_cmd_states, db_str, cmd_state_datestart, mp_dir)
+
+        err.write("Running %s\n" % cmd_state_cmd)
+        bash(cmd_state_cmd)
 
         err.write("Updated Test States in %s\n" % outdir )
         return
@@ -683,6 +704,7 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
         shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
 
         s.load_rdb = load_rdb
+        s.run_at_time = ifot_time
         s.data_setup()
 
 
@@ -776,7 +798,8 @@ def test_sosa_scs107(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
     scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
                + " --cmd-set scs107 "
                + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt_observing "
+               + " --interrupt "
+               + " --observing-only "
                + " --archive-file %s/nonload_cmds_archive.py " % outdir
                + db_str)
     err.write(scs_cmd + "\n")
@@ -784,6 +807,7 @@ def test_sosa_scs107(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
 
 
     prefix = 'sosa_post_'
+    s.run_at_time = '2010:283:20:40:02.056'
     s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
     text_files = s.output_text_files(prefix=prefix)
     for etype in ['states','timelines']:
@@ -859,6 +883,7 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
 
 
     prefix = 'sosa_nsmpost_'
+    s.run_at_time = '2010:283:20:40:02.056'
     s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
     text_files = s.output_text_files(prefix=prefix)
     for etype in ['states','timelines']:
@@ -870,6 +895,157 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
             assert False
 
     s.cleanup()
+
+
+def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
+
+    # Simulate timelines and cmd_states for all of 2010
+
+    err.write("Running all 2010 simulation \n" )
+
+    s = Scenario(outdir)
+    s.db_setup()
+    db_str = s.db_cmd_str()
+
+    # use a clone of the load_segments "time machine"
+    tm = 'iFOT_time_machine'
+    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
+    if not os.path.exists(tm):
+        c_output = bash_shell("hg clone %s" % repo_dir)
+    load_rdb = os.path.join(tm, 'load_segment.rdb')
+    
+    # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
+    shutil.copyfile('t/nsm_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    # when to begin simulation
+    start_time = mx.DateTime.Date(2010,1,1,0,0,0)
+
+    # load interrupt time
+    int_time = mx.DateTime.Date(2010,5,30,4,0,0)
+    # days between simulated cron task to update timelines
+    step = 1
+
+    for day_step in np.arange( 0, 365, step):
+        ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
+        # mercurial python stuff doesn't seem to work.
+        # grab version of iFOT_time_machine just before simulated date
+        
+        os.chdir(tm)
+        u_output = bash_shell("""hg update --date "%s%s" """ % (
+            '<', ifot_time.strftime()))
+        os.chdir("..")
+
+
+        # run the interrupt commanding before running the rest of the commands
+        # if the current time is the first simulated cron pass after the
+        # actual insertion of the interrupt commands
+        dtime = ifot_time - int_time
+        if dtime.hours >= 0 and dtime.hours < 24:
+            err.write( "Performing interrupt \n")
+            nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+                       + " --cmd-set nsm "
+                       + " --date '%s'" % DateTime(int_time).date
+                       + " --interrupt "
+                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
+                       + db_str)
+            err.write(nsm_cmd + "\n")
+            bash_shell(nsm_cmd)
+
+            scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+                       + " --cmd-set scs107 "
+                       + " --date '%s'" % DateTime(int_time).date
+                       + " --interrupt "
+                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
+                       + db_str)
+            err.write(scs_cmd + "\n")
+            bash_shell(scs_cmd)
+        else:
+            # but do some extra work to skip running the whole process on days when
+            # there are no updates from the load segments table
+            if os.path.exists(os.path.join(outdir, 'last_loads.rdb')):
+                last_rdb_lines = open(os.path.join(outdir, 'last_loads.rdb')).readlines()
+                new_rdb_lines = open(load_rdb).readlines()
+                differ = difflib.context_diff(last_rdb_lines, new_rdb_lines)
+                # cheat and just get lines that begin with + or !
+                # (new or changed)
+                change_test = re.compile('^(\+|\!)\s.*')
+                difflines = filter(change_test.match, [line for line in differ])
+                if len(difflines) == 0:
+                    err.write("Skipping %s, no additions\n" % ifot_time)
+                    continue
+                else:
+                    for line in difflines:
+                        err.write("%s" % line)
+
+        err.write("Processing %s\n" % ifot_time)
+
+        # and copy that load_segment file to testing/working directory
+        shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
+
+        # and copy that load_segment file to the 'last' file
+        shutil.copyfile(load_rdb, '%s/last_loads.rdb' % (outdir))
+
+        s.load_rdb = load_rdb
+        s.data_setup()
+
+
+        prefix = DateTime(ifot_time).date + '_'
+        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
+        # update_load_seg_db.py, update_cmd_states.py
+
+        s.run_at_time = ifot_time
+        s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+
+
+    # write out everything in the the timelines and states..
+    # doesn't use output_text_files, because I don't want the
+    # date ranges from the last rdb, I just want everything
+    prefix='all_'
+    dbh = s.db_handle()
+    timelines = dbh.fetchall("""select * from timelines""")
+
+    tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
+    pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
+
+    test_states = dbh.fetchall("""select * from cmd_states""")
+
+    fmt = {'power': '%.1f',
+           'pitch': '%.2f',
+           'tstart': '%.2f',
+           'tstop': '%.2f',
+           'ra': '%.2f',
+           'dec' : '%.2f',
+           'roll' : '%.2f',
+           'q1' : '%.2f',
+           'q2' : '%.2f',
+           'q3' : '%.2f',
+           'q4' : '%.2f',
+           }
+
+    newcols = sorted(list(test_states.dtype.names))
+    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
+    # use the [:-1] to skip the last one (because we'll have different end times 
+    newstates = np.rec.fromarrays([test_states[x][:-1] for x in newcols], names=newcols)
+
+    sfile = os.path.join( outdir, prefix+'test_states.dat')
+    pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
+
+    text_files = { 'states' : sfile,
+                   'timelines' : tfile }
+
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+    
+    s.cleanup()
+
+
+
 
 
 
