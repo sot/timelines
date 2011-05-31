@@ -439,20 +439,9 @@ class Scenario(object):
         newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
         newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
 
-        rfile = os.path.join( outdir, prefix+'test_states_ur.dat')
-        pprint(newstates, fmt=fmt, out=open(rfile, 'w'))
-
-        import Chandra.cmd_states
-        just_cols = ['ccd_count','clocking','datestart','datestop','dec',
-                     'fep_count','hetg','letg','obsid', 'pcad_mode', 'pitch',
-                     'power_cmd', 'q1', 'q2', 'q3', 'q4','ra','roll',
-                     'si_mode','simfa_pos', 'simpos']
-        reduced_states = Chandra.cmd_states.reduce_states(test_states, just_cols, allow_identical=True)
         sfile = os.path.join( outdir, prefix+'test_states.dat')
-        newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop') & (x != 'dither')]
-        newstates = np.rec.fromarrays([reduced_states[x] for x in newcols], names=newcols)
         pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-        
+
         cmds = dbh.fetchall("""select * from cmds
                               where date >= '%s'
                               and date <= '%s'
@@ -1050,20 +1039,9 @@ def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
     newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
     newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
     
-    rfile = os.path.join( outdir, prefix+'test_states_ur.dat')
-    pprint(newstates, fmt=fmt, out=open(rfile, 'w'))
-    
-    import Chandra.cmd_states
-    just_cols = ['ccd_count','clocking','datestart','datestop','dec',
-                 'fep_count','hetg','letg','obsid', 'pcad_mode', 'pitch',
-                 'power_cmd', 'q1', 'q2', 'q3', 'q4','ra','roll',
-                 'si_mode','simfa_pos', 'simpos']
-    reduced_states = Chandra.cmd_states.reduce_states(test_states, just_cols, allow_identical=True)
     sfile = os.path.join( outdir, prefix+'test_states.dat')
-    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop') & (x != 'dither')]
-    newstates = np.rec.fromarrays([reduced_states[x] for x in newcols], names=newcols)
     pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-
+    
     text_files = { 'states' : sfile,
                    'timelines' : tfile }
 
