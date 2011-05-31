@@ -24,6 +24,7 @@ MP_DIR = '/data/mpcrit1/mplogs/'
 SKA = os.environ['SKA']
 verbose = True
 DBI = 'sqlite'
+cleanup = True
 
 def pprint(recarray, fmt=None, cols=None, out=sys.stdout):
     """
@@ -246,6 +247,9 @@ class Scenario(object):
         self.db_setup(wipe=True)
 
     def cleanup(self):
+        if not cleanup:
+            err.write("Cleanup not run due to cleanup=False")
+            return
         self.db_wipe()
         self.dbh.conn.close()
         try:
@@ -413,7 +417,7 @@ class Scenario(object):
 
         test_states = dbh.fetchall("""select * from cmd_states
                                      where datestart >= '%s'
-                                     and datestart <= '%s'
+                                     and datestop <= '%s'
                                      order by datestart""" % (datestart, datestop ))
 
         fmt = {'power': '%.1f',
@@ -429,14 +433,26 @@ class Scenario(object):
                'q4' : '%.2f',
                }
 
+
+
         newcols = sorted(list(test_states.dtype.names))
         newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
         newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
 
+        rfile = os.path.join( outdir, prefix+'test_states_ur.dat')
+        pprint(newstates, fmt=fmt, out=open(rfile, 'w'))
+
+        import Chandra.cmd_states
+        just_cols = ['ccd_count','clocking','datestart','datestop','dec',
+                     'fep_count','hetg','letg','obsid', 'pcad_mode', 'pitch',
+                     'power_cmd', 'q1', 'q2', 'q3', 'q4','ra','roll',
+                     'si_mode','simfa_pos', 'simpos']
+        reduced_states = Chandra.cmd_states.reduce_states(test_states, just_cols, allow_identical=True)
         sfile = os.path.join( outdir, prefix+'test_states.dat')
+        newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop') & (x != 'dither')]
+        newstates = np.rec.fromarrays([reduced_states[x] for x in newcols], names=newcols)
         pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-
-
+        
         cmds = dbh.fetchall("""select * from cmds
                               where date >= '%s'
                               and date <= '%s'
@@ -527,28 +543,28 @@ def test_loads():
 
     # load segment files and states to test against
     good = [
-        dict(loads='t/2008:048:08:07:00.000.rdb',
-                  states='t/2008:048:08:07:00.000.dat'),
-             dict(loads='t/2010:023:15:15:00.000.rdb',
-                  states='t/2010:023:15:15:00.000.dat'),
-             dict(loads='t/2009:164:04:11:15.022.rdb',
-                  states='t/2009:164:04:11:15.022.dat'),
-             dict(loads='t/2009:193:20:30:02.056.rdb',
-                  states='t/2009:193:20:30:02.056.dat'),
-             dict(loads='t/2009:214:22:44:19.592.rdb',
-                  states='t/2009:214:22:44:19.592.dat'),
-             dict(loads='t/july_fixed.rdb',
-                  states='t/july_fixed.dat'),
-             dict(loads='t/2009:248:12:39:44.351.rdb',
-                  states='t/2009:248:12:39:44.351.dat'),
-             dict(loads='t/2009:274:22:25:44.351.rdb',
-                  states='t/2009:274:22:25:44.351.dat'),
-             dict(loads='t/cut_cl110_1409.rdb',
-                  states='t/cut_cl110_1409.dat'),
-             dict(loads='t/cut_cl304_0504.rdb',
-                  states='t/cut_cl304_0504.dat'),
-             dict(loads='t/cut_cl352_1208.rdb',
-                  states='t/cut_cl352_1208.dat'),
+         dict(loads='t/2008:048:08:07:00.000.rdb',
+             states='t/2008:048:08:07:00.000.dat'),
+        dict(loads='t/2010:023:15:15:00.000.rdb',
+             states='t/2010:023:15:15:00.000.dat'),
+        dict(loads='t/2009:164:04:11:15.022.rdb',
+             states='t/2009:164:04:11:15.022.dat'),
+        dict(loads='t/2009:193:20:30:02.056.rdb',
+             states='t/2009:193:20:30:02.056.dat'),
+        dict(loads='t/2009:214:22:44:19.592.rdb',
+             states='t/2009:214:22:44:19.592.dat'),
+        dict(loads='t/july_fixed.rdb',
+             states='t/july_fixed.dat'),
+        dict(loads='t/2009:248:12:39:44.351.rdb',
+             states='t/2009:248:12:39:44.351.dat'),
+        dict(loads='t/2009:274:22:25:44.351.rdb',
+             states='t/2009:274:22:25:44.351.dat'),
+        dict(loads='t/cut_cl110_1409.rdb',
+             states='t/cut_cl110_1409.dat'),
+        dict(loads='t/cut_cl304_0504.rdb',
+             states='t/cut_cl304_0504.dat'),
+        dict(loads='t/cut_cl352_1208.rdb',
+             states='t/cut_cl352_1208.dat'),
         ]
 
     for ftest in good:
@@ -1001,14 +1017,20 @@ def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
     # write out everything in the the timelines and states..
     # doesn't use output_text_files, because I don't want the
     # date ranges from the last rdb, I just want everything
-    prefix='all_'
+
     dbh = s.db_handle()
+    prefix='all_'
+
     timelines = dbh.fetchall("""select * from timelines""")
 
     tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
     pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
 
-    test_states = dbh.fetchall("""select * from cmd_states""")
+    test_states = dbh.fetchall("""select * from cmd_states
+                                  where datestart >= '%s'
+                                  and datestop <= '%s'
+                                  order by datestart""" % (timelines[0]['datestart'],
+                                                           timelines[-1]['datestop'] ))
 
     fmt = {'power': '%.1f',
            'pitch': '%.2f',
@@ -1023,12 +1045,23 @@ def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
            'q4' : '%.2f',
            }
 
+
     newcols = sorted(list(test_states.dtype.names))
     newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
-    # use the [:-1] to skip the last one (because we'll have different end times 
-    newstates = np.rec.fromarrays([test_states[x][:-1] for x in newcols], names=newcols)
-
+    newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
+    
+    rfile = os.path.join( outdir, prefix+'test_states_ur.dat')
+    pprint(newstates, fmt=fmt, out=open(rfile, 'w'))
+    
+    import Chandra.cmd_states
+    just_cols = ['ccd_count','clocking','datestart','datestop','dec',
+                 'fep_count','hetg','letg','obsid', 'pcad_mode', 'pitch',
+                 'power_cmd', 'q1', 'q2', 'q3', 'q4','ra','roll',
+                 'si_mode','simfa_pos', 'simpos']
+    reduced_states = Chandra.cmd_states.reduce_states(test_states, just_cols, allow_identical=True)
     sfile = os.path.join( outdir, prefix+'test_states.dat')
+    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop') & (x != 'dither')]
+    newstates = np.rec.fromarrays([reduced_states[x] for x in newcols], names=newcols)
     pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
 
     text_files = { 'states' : sfile,
