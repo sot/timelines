@@ -34,8 +34,8 @@ load_segments table
 The load_segments table stores the list of run and to-be-run load
 segments as obtained from iFOT_.  
 
-The timelines software creates a unique id (from the datestart in
-Chandra seconds).  Note that the load_segment string
+The timelines software creates a unique id (historically from the datestart in
+Chandra seconds; now just an integer).  Note that the load_segment string
 (e.g. 'CL180:0800') may not be unique for the the mission as it is
 constructed from the day-of-year and time.  Any search by load_segment
 name should also include a year.
@@ -70,7 +70,7 @@ unique id.  Note that there may be more than one timeline for a load_segment
 (This may happen, for example, if a command load is created with
 Replan/ReOpen and the commands which are brought forward into the new
 command load are found in the Backstop directory of the original
-week.) 
+week. This will also occur once the move to splits loads has been made.) 
 
 ==================   =========   ====
 Name                 Type        Size
@@ -89,7 +89,7 @@ Name                 Type        Size
 the developers.)  
 
 After SCS107 or other interrupt, the datestops of all
-timelines at or after the interrupt are set to the interrupt time.
+timelines in the observing slots at or after the interrupt are set to the interrupt time.
 Those timeline entries will eventually be removed and replaced with
 new entries during normal processing and ingest.
 
