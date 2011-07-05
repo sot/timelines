@@ -70,7 +70,7 @@ unique id.  Note that there may be more than one timeline for a load_segment
 (This may happen, for example, if a command load is created with
 Replan/ReOpen and the commands which are brought forward into the new
 command load are found in the Backstop directory of the original
-week. This will also occur once the move to splits loads has been made.) 
+week. This will also occur once the move to split loads has been made.) 
 
 ==================   =========   ====
 Name                 Type        Size
