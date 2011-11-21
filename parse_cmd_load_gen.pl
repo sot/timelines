@@ -96,7 +96,7 @@ my $sum_glob = 'C[0-9][0-9][0-9]?[0-9][0-9][0-9][0-9].sum';
 YEAR:
 for ( my $year = 1999; $year <= $curr_year; $year++){
     my $cmd = "find -L ${mp_dir}/${year}/${week_glob}/ofls?/mps/ "
-	. " -wholename \"*/ofls?/mps/${sum_glob}\" ";
+	. " -maxdepth 1 -wholename \"*/ofls?/mps/${sum_glob}\" ";
     if (defined $touch_stat){
 	$cmd .= " -newer $opt{touch_file}";
 	my $touch_year = strftime "%Y", gmtime($touch_stat->mtime());
