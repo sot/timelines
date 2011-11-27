@@ -23,7 +23,7 @@ err = sys.stderr
 MP_DIR = '/data/mpcrit1/mplogs/'
 SKA = os.environ['SKA']
 verbose = True
-DBI = 'sqlite'
+DBI = 'sybase'
 cleanup = True
 
 def pprint(recarray, fmt=None, cols=None, out=sys.stdout):
@@ -845,6 +845,157 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
     s.mp_dir = os.path.join(outdir, 'mp') 
 
     shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
+    mp_dir = os.path.join(outdir, 'mp')
+    
+    prefix = 'sosa_nsmpre_'
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    text_files = s.output_text_files(prefix=prefix)
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+
+
+    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
+    
+
+    # a time for the interrupt (chosen in the middle of a segment)
+    int_time = '2010:278:20:00:00.000'
+
+    # run the interrupt commanding before running the rest of the commands
+    # if the current time is the first simulated cron pass after the
+    # actual insertion of the interrupt commands
+    nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+               + " --cmd-set nsm "
+               + " --date '%s'" % DateTime(int_time).date
+               + " --interrupt "
+               + " --archive-file %s/nonload_cmds_archive.py " % outdir
+               + db_str)
+    err.write(nsm_cmd + "\n")
+    bash_shell(nsm_cmd)
+
+    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+               + " --cmd-set scs107 "
+               + " --date '%s'" % DateTime(int_time).date
+               + " --interrupt "
+               + " --archive-file %s/nonload_cmds_archive.py " % outdir
+               + db_str)
+    err.write(scs_cmd + "\n")
+    bash_shell(scs_cmd)
+
+
+    prefix = 'sosa_nsmpost_'
+    s.run_at_time = '2010:283:20:40:02.056'
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    text_files = s.output_text_files(prefix=prefix)
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+
+    s.cleanup()
+
+def test_sosa_scs107_V2(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
+        
+    err.write("Running sosa scs 107 v2 simulation \n" )
+
+    s = Scenario(outdir)
+    s.db_setup()
+    db_str = s.db_cmd_str()
+
+    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
+    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    load_dir = os.path.join(outdir, 'loads')
+    os.makedirs(load_dir)
+    shutil.copy('t/sosa.rdb', load_dir)
+    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
+    s.load_dir = os.path.join(outdir, 'loads')
+    s.mp_dir = os.path.join(outdir, 'mp') 
+
+    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
+    shutil.copy('t/sosa_v2_C276_0906.sum', 
+                os.path.join(outdir, 'mp/2010/OCT0410/oflsa/mps', 
+                             'C276_0906.sum'))
+    mp_dir = os.path.join(outdir, 'mp')
+    
+    prefix = 'sosa_pre_'
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    text_files = s.output_text_files(prefix=prefix)
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+
+
+    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
+    
+
+    # a time for the interrupt (chosen in the middle of a segment)
+    int_time = '2010:278:20:00:00.000'
+
+    # run the interrupt commanding before running the rest of the commands
+    # if the current time is the first simulated cron pass after the
+    # actual insertion of the interrupt commands
+    #print "Performing SCS107 interrupt"
+    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
+               + " --cmd-set scs107 "
+               + " --date '%s'" % DateTime(int_time).date
+               + " --interrupt "
+               + " --observing-only "
+               + " --archive-file %s/nonload_cmds_archive.py " % outdir
+               + db_str)
+    err.write(scs_cmd + "\n")
+    bash_shell(scs_cmd)
+
+
+    prefix = 'sosa_post_'
+    s.run_at_time = '2010:283:20:40:02.056'
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    text_files = s.output_text_files(prefix=prefix)
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+    s.cleanup()
+
+
+def test_sosa_nsm_v2(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
+        
+    err.write("Running sosa nsm v2 simulation \n" )
+
+    s = Scenario(outdir)
+    s.db_setup()
+    db_str = s.db_cmd_str()
+
+    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
+    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    load_dir = os.path.join(outdir, 'loads')
+    os.makedirs(load_dir)
+    shutil.copy('t/sosa.rdb', load_dir)
+    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
+    s.load_dir = os.path.join(outdir, 'loads')
+    s.mp_dir = os.path.join(outdir, 'mp') 
+
+    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
+    shutil.copy('t/sosa_v2_C276_0906.sum', 
+                os.path.join(outdir, 'mp/2010/OCT0410/oflsa/mps', 
+                             'C276_0906.sum'))
     mp_dir = os.path.join(outdir, 'mp')
     
     prefix = 'sosa_nsmpre_'
