@@ -294,7 +294,7 @@ sub parse_clgps {
 	    if ( $piece =~ /Load\sname:\s+(CL\d{3}:\d{4})/){
 		$load{load_segment} = $1;
 	    }
-	    if ( $piece =~ /SCS\sNumber:\s+(\d{3}(\/\d{3})?)/){
+	    if ( $piece =~ /SCS\sNumber:\s+(\d{3}(\s*\/\s*\d{3})?)/){
 		$load{load_scs} = $1;
 	    }
 	    if ( $piece =~ /First\sCommand\sTime:\s+(\S+)/ ){
@@ -314,7 +314,7 @@ sub parse_clgps {
 
     my @loads;
     for my $load (@rawloads){
-        if ($load->{load_scs} =~ /^(\d{3})\/(\d{3})$/){
+        if ($load->{load_scs} =~ /^(\d{3})\s*\/\s*(\d{3})$/){
             my $vehicle = $1;
             my $observing = $2;
             $load->{load_scs} = $vehicle;
