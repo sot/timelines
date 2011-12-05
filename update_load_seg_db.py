@@ -533,6 +533,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
                 log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
             return
 
+
         cmd = ("DELETE FROM load_segments WHERE datestart >= '%s'"
                % db_loads[i_diff]['datestart'] )
         log.info('LOAD_SEG INFO: ' + cmd)
@@ -549,8 +550,10 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
                   (i_diff, len(ifot_loads)+1))
 
     max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
-
-    for load in ifot_loads[i_diff:]:
+    
+    i_diff_datestart = ifot_loads[i_diff]['datestart']
+    i_diff_date_match = ifot_loads['datestart'] >= i_diff_datestart
+    for load in ifot_loads[i_diff_date_match]:
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'] )
