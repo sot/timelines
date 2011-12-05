@@ -555,8 +555,8 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     i_diff_date_match = ifot_loads['datestart'] >= i_diff_datestart
     for load in ifot_loads[i_diff_date_match]:
         log.debug('LOAD_SEG DEBUG: inserting load')
-        insert_string = "\t %s %d %s %s" % ( load['load_segment'], load['year'],
-                                             load['datestart'], load['datestop'] )
+        insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
+                                             load['datestart'], load['datestop'], load['load_scs'] )
         log.debug(insert_string)
         
         load_dict = dict(zip(load.dtype.names, load))
