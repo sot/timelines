@@ -536,7 +536,8 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
         cmd = ("DELETE FROM load_segments WHERE datestart >= '%s'"
                % db_loads[i_diff]['datestart'] )
         log.info('LOAD_SEG INFO: ' + cmd)
-        clear_rel_timelines( db_loads[i_diff:], dbh=dbh, dryrun=dryrun)
+        at_after_match = (db_loads['datestart'] >= db_loads[i_diff]['datestart'])
+        clear_rel_timelines(db_loads[at_after_match], dbh=dbh, dryrun=dryrun)
         if not dryrun:
             dbh.execute(cmd)
 
