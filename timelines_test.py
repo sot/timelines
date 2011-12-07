@@ -11,6 +11,7 @@ from itertools import count, izip
 from Ska.Shell import bash_shell, bash
 import Ska.DBI
 import Ska.Table
+import asciitable
 from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
@@ -556,6 +557,7 @@ def test_loads():
              states='t/cut_cl352_1208.dat'),
         ]
 
+
     for ftest in good:
         load_rdb = ftest['loads']
         state_file = ftest['states']
@@ -666,6 +668,43 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
+def test_first_sosa_update():
+    # for a plain update, sosa or not, nothing should be deleted
+    # and new entries should be inserted
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == 0
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
+    assert to_insert['datestart'] == '2011:335:13:44:41.368'
+
+def test_load_update_weird():
+    # for a difference in the past on any column, the entry
+    # should be replaced
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    db_loads[5]['load_segment'] = 'CL324:0120'
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= '2011:324:01:05:40.930'])
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:324:01:05:40.930'])
+    assert to_delete[0]['datestart'] == '2011:324:01:05:40.930'
+    assert to_insert[0]['datestart'] == '2011:324:01:05:40.930'
+
+def test_load_update_truncate():
+    # if an old entry is now truncated, it and all after should be replaced
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    want_loads[13]['datestop'] = '2011:337:00:00:00.000'
+    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= '2011:335:13:44:41.368'])
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
+    assert to_delete[0]['datestart'] == '2011:335:13:44:41.368'
+    assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
+
+
 
 def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
 
@@ -701,6 +740,8 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
         # grab version of iFOT_time_machine just before simulated date
         
         os.chdir(tm)
+        err.write("""hg update --date "%s%s" """ % (
+                '<', ifot_time.strftime()))
         u_output = bash_shell("""hg update --date "%s%s" """ % (
             '<', ifot_time.strftime()))
         os.chdir("..")
@@ -1191,8 +1232,9 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
 
 
 
-
-def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
+# 'test' isn't in the name to skip using this as a nosetest by default.
+# It just takes too long.
+def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
 
     # Simulate timelines and cmd_states for all of 2010
 

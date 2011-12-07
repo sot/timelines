@@ -463,6 +463,35 @@ def get_last_timeline(dbh=None):
     return timeline
 
                                
+def find_load_seg_changes(want, have, exclude=[]):
+    
+    # Find mismatches:
+    match_cols = [x[0] for x in have.dtype.descr if 'f' not in x[1]]
+    [match_cols.remove(col) for col in exclude]
+    # use min( ... ) to only check through the range that is in both lists
+    for i_diff in xrange(0, min( len(want), len(have) )):
+        want_entry = want[i_diff]
+        have_entry = have[i_diff]
+        # does the db load match?
+        if (any(have_entry[x] != want_entry[x] for x in match_cols) ):
+            #log.info('%s INFO: Mismatch from ifot datestart %s load %s' 
+            #         % ( check_name, want_entry['datestart'], want_entry['load_segment']))
+            log.info('LOAD_SEG INFO: Mismatch on these entries:')
+            log.info(want_entry)
+            log.info(have_entry)
+            break                
+
+    if i_diff == 0:
+        raise ValueError("Unexpected mismatch at first database entry in range")
+
+    at_after_match = (have['datestart'] >= have[i_diff]['datestart'])
+    to_delete = have[at_after_match]
+
+    i_diff_datestart = want[i_diff]['datestart']
+    i_diff_date_match = want['datestart'] >= i_diff_datestart
+    to_insert = want[i_diff_date_match]
+    return to_delete, to_insert
+
 
 
 def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
@@ -496,76 +525,57 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
                                ifot_loads[0]['datestart'],
                                )
                             )
-    
+
     # if no overlap on time range, check for an empty table (which should be OK)
     if len(db_loads) == 0:
         count_all_db_loads = dbh.fetchall("select count(*) as all_count from load_segments")
         count_all = count_all_db_loads[0]['all_count']
         if count_all == 0:
             log.warn("LOAD_SEG_WARN: load_segment table is empty")
-            i_diff = 0
         else:
             raise ValueError("No overlap in database for load segment interval")
+        to_delete = []
+        to_insert = ifot_loads
     else:
-        # Find mismatches:
-        match_cols = [x[0] for x in db_loads.dtype.descr if 'f' not in x[1]]
-        match_cols.remove('id')
-        # use min( ... ) to only check through the range that is in both lists
-        for i_diff in xrange(0, min( len(ifot_loads), len(db_loads) )):
-            ifot_load = ifot_loads[i_diff]
-            db_load = db_loads[i_diff]
-            # does the db load match?
-            if (any(db_load[x] != ifot_load[x] for x in match_cols) ):
-                log.info('LOAD_SEG INFO: Mismatch from ifot datestart %s load %s' 
-                         % ( ifot_load['datestart'], ifot_load['load_segment']))
-                log.info( ifot_load )
-                log.info( db_load )
-                break                
+        to_delete, to_insert = find_load_seg_changes(ifot_loads, db_loads, exclude=['id'])
 
-        if i_diff == 0:
-            raise ValueError("Unexpected mismatch at first database entry in range")
+    if (not len(to_delete) and not len(to_insert)):
+        log.info('LOAD_SEG INFO: No database update required')
 
-        if i_diff == len(ifot_loads) - 1:
-            log.info('LOAD_SEG INFO: No database update required')
-            later_loads = dbh.fetchall("select * from load_segments where datestart >= '%s'"
-                                           % ifot_loads[-1]['datestop'])
-            if len(later_loads) != 0:
-                log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
-            return
+    later_loads = dbh.fetchall("select * from load_segments where datestart >= '%s'"
+                               % ifot_loads[-1]['datestop'])
+    if len(later_loads) != 0:
+        log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
 
-
-        cmd = ("DELETE FROM load_segments WHERE datestart >= '%s'"
-               % db_loads[i_diff]['datestart'] )
-        log.info('LOAD_SEG INFO: ' + cmd)
-        at_after_match = (db_loads['datestart'] >= db_loads[i_diff]['datestart'])
-        clear_rel_timelines(db_loads[at_after_match], dbh=dbh, dryrun=dryrun)
-        if not dryrun:
+    clear_rel_timelines(to_delete, dbh=dbh, dryrun=dryrun)
+    if not dryrun:
+        for load in to_delete:
+            cmd = ("DELETE FROM load_segments WHERE id = %d"
+                   % load['id'] )
+            log.info('LOAD_SEG INFO: ' + cmd)
             dbh.execute(cmd)
 
     # check for overlap in the loads... the check_load_overlap just logs warnings
     check_load_overlap( ifot_loads )    
 
     # Insert new loads[i_diff:] into load_segments
-    log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
-                  (i_diff, len(ifot_loads)+1))
+    #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
+    #              (i_diff, len(ifot_loads)+1))
 
     max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
     
-    i_diff_datestart = ifot_loads[i_diff]['datestart']
-    i_diff_date_match = ifot_loads['datestart'] >= i_diff_datestart
-    for load in ifot_loads[i_diff_date_match]:
+    for load in to_insert:
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'], load['load_scs'] )
         log.debug(insert_string)
-        
         load_dict = dict(zip(load.dtype.names, load))
         load_dict['id'] = max_id + 1;
         max_id = load_dict['id']
         if not dryrun:
             dbh.insert(load_dict, 'load_segments', commit=True)
             
-    return ifot_loads[i_diff:]
+    return to_insert
 
     
 
@@ -617,7 +627,6 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
                                    where datestart >= '%s' order by datestart   
                                   """ % ( ifot_loads[0]['datestart'] )
                                 )
-            
         update_timelines_db( loads = db_loads, dbh=dbh, dryrun=dryrun, test=test )
 
     log.removeHandler(ch)
