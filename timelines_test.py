@@ -674,10 +674,10 @@ def test_first_sosa_update():
     db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
     want_load_rdb = asciitable.read('t/first_sosa.rdb')
     want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
-    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
     assert len(to_delete) == 0
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
-    assert to_insert['datestart'] == '2011:335:13:44:41.368'
+    assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
 
 def test_load_update_weird():
     # for a difference in the past on any column, the entry
@@ -686,7 +686,7 @@ def test_load_update_weird():
     db_loads[5]['load_segment'] = 'CL324:0120'
     want_load_rdb = asciitable.read('t/first_sosa.rdb')
     want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
-    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
     assert len(to_delete) == len(db_loads[db_loads['datestart'] >= '2011:324:01:05:40.930'])
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:324:01:05:40.930'])
     assert to_delete[0]['datestart'] == '2011:324:01:05:40.930'
@@ -697,12 +697,12 @@ def test_load_update_truncate():
     db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
     want_load_rdb = asciitable.read('t/first_sosa.rdb')
     want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
-    want_loads[13]['datestop'] = '2011:337:00:00:00.000'
-    to_delete, to_insert = update_load_seg_db.find_changes(want_loads, db_loads, exclude=['id']) 
-    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= '2011:335:13:44:41.368'])
-    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
-    assert to_delete[0]['datestart'] == '2011:335:13:44:41.368'
-    assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
+    want_loads[10]['datestop'] = '2011:332:00:00:00.000'
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= want_loads[10]['datestart']])
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= want_loads[10]['datestart']])
+    assert to_delete[0]['datestart'] == want_loads[10]['datestart']
+    assert to_insert[0]['datestart'] == want_loads[10]['datestart']
 
 
 

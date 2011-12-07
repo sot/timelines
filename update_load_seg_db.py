@@ -214,7 +214,7 @@ def weeks_for_load( run_load, dbh=None, test=False ):
         # append even if incomplete
         match_load_pieces.append(match.copy())
 
-    timelines = sorted(match_load_pieces, key=lambda k: k['datestart'])
+    timelines = sorted(match_load_pieces, key=lambda k: (k['datestart'], k['load_segment_id']))
     return timelines
 
 def get_ref_timelines( datestart, dbh=None, n=10):
@@ -277,10 +277,9 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     # get existing entries
     db_timelines = dbh.fetchall("""select * from timelines 
                                    where datestop >= '%s'
-                                   order by datestart 
+                                   order by datestart,load_segment_id 
                                    """ % ( timelines[0]['datestart']))
        
-    from itertools import count, izip
     if len(db_timelines) > 0:
         i_diff = 0
         for timeline in  timelines:
@@ -359,6 +358,7 @@ def rdb_to_db_schema( orig_ifot_loads ):
         loads.append(load)
     names = ('load_segment','year','datestart','datestop','load_scs','fixed_by_hand')
     load_recs = np.rec.fromrecords( loads, names=names)
+    load_recs = np.sort(load_recs, order=['datestart', 'load_scs'])
     return load_recs
 
 
@@ -366,23 +366,17 @@ def check_load_overlap( loads ):
     """
     Checks command load segment overlap
 
-    Logs warnings for : overlap greater than 15 minutes
-                        separation greater than 6 hours
-                        any overlap in the same SCS
-
+    Logs warnings for : separation greater than 6 hours
+                        any overlap in the same SCS    
+                        
     :param loads: recarray of load segments
     :rtype: None
     """
 
     sep_times = ( DateTime(loads[1:]['datestart']).secs 
                   - DateTime(loads[:-1]['datestop']).secs )
-    max_overlap_mins = 15
     max_sep_hours = 12
-    max_overlap = -1 * max_overlap_mins * 60
     max_sep = max_sep_hours * 60 * 60
-    # check for overlap
-    if (any(sep_times < max_overlap)):
-        log.warn('LOAD_SEG WARN: Loads overlap by more than %i minutes' % max_overlap_mins)
     # check for too much sep
     if (any(sep_times > max_sep )):
         for load_idx in np.flatnonzero(sep_times > max_sep):
@@ -465,13 +459,14 @@ def get_last_timeline(dbh=None):
                                
 def find_load_seg_changes(want, have, exclude=[]):
     
+    to_delete = []
+    to_insert = []
     # Find mismatches:
     match_cols = [x[0] for x in have.dtype.descr if 'f' not in x[1]]
     [match_cols.remove(col) for col in exclude]
     # use min( ... ) to only check through the range that is in both lists
-    for i_diff in xrange(0, min( len(want), len(have) )):
-        want_entry = want[i_diff]
-        have_entry = have[i_diff]
+    i_diff = 0
+    for want_entry, have_entry in izip(want, have):
         # does the db load match?
         if (any(have_entry[x] != want_entry[x] for x in match_cols) ):
             #log.info('%s INFO: Mismatch from ifot datestart %s load %s' 
@@ -480,16 +475,19 @@ def find_load_seg_changes(want, have, exclude=[]):
             log.info(want_entry)
             log.info(have_entry)
             break                
+        i_diff += 1
 
     if i_diff == 0:
         raise ValueError("Unexpected mismatch at first database entry in range")
 
-    at_after_match = (have['datestart'] >= have[i_diff]['datestart'])
-    to_delete = have[at_after_match]
+    if i_diff < len(have):
+        at_after_match = (have['datestart'] >= have[i_diff]['datestart'])
+        to_delete = have[at_after_match]
 
-    i_diff_datestart = want[i_diff]['datestart']
-    i_diff_date_match = want['datestart'] >= i_diff_datestart
-    to_insert = want[i_diff_date_match]
+    if i_diff < len(want):
+        i_diff_datestart = want[i_diff]['datestart']
+        i_diff_date_match = want['datestart'] >= i_diff_datestart
+        to_insert = want[i_diff_date_match]
     return to_delete, to_insert
 
 
@@ -521,7 +519,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
 
     db_loads = dbh.fetchall("""select * from load_segments 
                                where datestart >= '%s' 
-                               order by datestart """ % (
+                               order by datestart,load_scs """ % (
                                ifot_loads[0]['datestart'],
                                )
                             )
