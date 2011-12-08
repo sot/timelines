@@ -11,6 +11,7 @@ from itertools import count, izip
 from Ska.Shell import bash_shell, bash
 import Ska.DBI
 import Ska.Table
+import asciitable
 from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
@@ -396,29 +397,34 @@ class Scenario(object):
         err.write("Updated Test States in %s\n" % outdir )
         return
 
-    def output_text_files(self, prefix=''):
+    def output_text_files(self, prefix='', get_all=False):
 
         load_rdb = self.load_rdb
         outdir = self.outdir
         dbh = self.db_handle()
         
-        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
-        datestart = loads[0]['TStart (GMT)']
-        datestop = loads[-1]['TStop (GMT)']
+        if not get_all:
+            loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+            datestart = loads[0]['TStart (GMT)']
+            datestop = loads[-1]['TStop (GMT)']
 
-        timelines = dbh.fetchall("""select * from timelines
-                                    where datestart >= '%s'
-                                    and datestop <= '%s'
-                                    order by datestart""" % (datestart, datestop))
+            timelines = dbh.fetchall("""select * from timelines
+                                        where datestart >= '%s'
+                                        and datestop <= '%s'
+                                        order by datestart,load_segment_id""" % (datestart, datestop))
+            test_states = dbh.fetchall("""select * from cmd_states
+                                     where datestart >= '%s'
+                                     and datestop <= '%s'
+                                     order by datestart""" % (datestart, datestop ))
+        else:
+            timelines = dbh.fetchall("""select * from timelines
+                                        order by datestart, load_segment_id""")
+            test_states = dbh.fetchall("""select * from cmd_states
+                                     order by datestart""")
 
 
         tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
         pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
-
-        test_states = dbh.fetchall("""select * from cmd_states
-                                     where datestart >= '%s'
-                                     and datestop <= '%s'
-                                     order by datestart""" % (datestart, datestop ))
 
         fmt = {'power': '%.1f',
                'pitch': '%.2f',
@@ -434,7 +440,6 @@ class Scenario(object):
                }
 
 
-
         newcols = sorted(list(test_states.dtype.names))
         newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
         newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
@@ -442,18 +447,23 @@ class Scenario(object):
         sfile = os.path.join( outdir, prefix+'test_states.dat')
         pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
 
-        cmds = dbh.fetchall("""select * from cmds
+        # get the commands not associated with a timeline for the interval 
+        # of interest
+        null_cmds = dbh.fetchall("""select * from cmds
                               where date >= '%s'
                               and date <= '%s'
                               and timeline_id is NULL
-                              order by date""" % (datestart, datestop ))
+                              order by date""" % (timelines[0]['datestart'], 
+                                                  timelines[-1]['datestop'] ))
 
-        err.write("%s %s\n" % (datestart, datestop))
         try:
-            cmds = cmds.tolist()
+            null_cmds = null_cmds.tolist()
         except AttributeError:
             pass
 
+        # start off with the null commands and then insert all of the
+        # timeline-associated commands by timeline id
+        cmds = null_cmds
         for tl in timelines:
             tl_cmds = dbh.fetchall("""select * from cmds
                                      where timeline_id = %d
@@ -469,7 +479,6 @@ class Scenario(object):
         cfile =  os.path.join( outdir, prefix+'test_cmds.dat')        
         pprint(cmds, out=open(cfile, 'w'))
 
-        
         self.text_files =  { 'timelines': tfile,
                              'states': sfile,
                              'cmds': cfile }
@@ -555,6 +564,7 @@ def test_loads():
         dict(loads='t/cut_cl352_1208.rdb',
              states='t/cut_cl352_1208.dat'),
         ]
+
 
     for ftest in good:
         load_rdb = ftest['loads']
@@ -666,6 +676,56 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
+def test_first_sosa_update():
+    # for a plain update, sosa or not, nothing should be deleted
+    # and new entries should be inserted
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == 0
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
+    assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
+
+def test_load_update_weird():
+    # for a difference in the past on any column, the entry
+    # should be replaced
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    db_loads[5]['load_segment'] = 'CL324:0120'
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= '2011:324:01:05:40.930'])
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:324:01:05:40.930'])
+    assert to_delete[0]['datestart'] == '2011:324:01:05:40.930'
+    assert to_insert[0]['datestart'] == '2011:324:01:05:40.930'
+
+def test_load_update_truncate():
+    # if an old entry is now truncated, it and all after should be replaced
+    db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/first_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    want_loads[10]['datestop'] = '2011:332:00:00:00.000'
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == len(db_loads[db_loads['datestart'] >= want_loads[10]['datestart']])
+    assert len(to_insert) == len(want_loads[want_loads['datestart'] >= want_loads[10]['datestart']])
+    assert to_delete[0]['datestart'] == want_loads[10]['datestart']
+    assert to_insert[0]['datestart'] == want_loads[10]['datestart']
+
+def test_load_update_sosa_truncate():
+    # if an old entry is now truncated, it and all after should be replaced
+    # but the first entry of a sosa pair should not be removed if it is before the difference
+    db_loads = asciitable.read('t/post_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/second_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    want_loads[12]['datestop'] = '2011:338:00:00:00.000'
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == 11
+    assert len(to_insert) == 11
+    assert to_delete[0]['datestart'] == want_loads[12]['datestart']
+    assert to_insert[0]['datestart'] == want_loads[12]['datestart']
+
+
 
 def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
 
@@ -701,6 +761,8 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
         # grab version of iFOT_time_machine just before simulated date
         
         os.chdir(tm)
+        err.write("""hg update --date "%s%s" """ % (
+                '<', ifot_time.strftime()))
         u_output = bash_shell("""hg update --date "%s%s" """ % (
             '<', ifot_time.strftime()))
         os.chdir("..")
@@ -1053,7 +1115,114 @@ def test_sosa_nsm_v2(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
     s.cleanup()
 
 
-def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
+def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
+
+    # Simulate timelines and cmd_states for all of 2010
+
+    err.write("Running SOSA transition simulation \n" )
+
+    s = Scenario(outdir)
+    s.db_setup()
+    db_str = s.db_cmd_str()
+
+    # use a clone of the load_segments "time machine"
+    tm = 'iFOT_time_machine'
+    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
+    if not os.path.exists(tm):
+        c_output = bash_shell("hg clone %s" % repo_dir)
+    load_rdb = os.path.join(tm, 'load_segment.rdb')
+    
+    # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
+    shutil.copyfile('t/nsm_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    # when to begin simulation
+    start_time = mx.DateTime.Date(2011,11,30,0,0,0)
+
+    # days between simulated cron task to update timelines
+    step = 1
+
+    for day_step in np.arange( 0, 5, step):
+        ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
+        # mercurial python stuff doesn't seem to work.
+        # grab version of iFOT_time_machine just before simulated date
+        
+        os.chdir(tm)
+        u_output = bash_shell("""hg update --date "%s%s" """ % (
+            '<', ifot_time.strftime()))
+        os.chdir("..")
+
+
+        # but do some extra work to skip running the whole process on days when
+        # there are no updates from the load segments table
+        if os.path.exists(os.path.join(outdir, 'last_loads.rdb')):
+            last_rdb_lines = open(os.path.join(outdir, 'last_loads.rdb')).readlines()
+            new_rdb_lines = open(load_rdb).readlines()
+            differ = difflib.context_diff(last_rdb_lines, new_rdb_lines)
+            # cheat and just get lines that begin with + or !
+            # (new or changed)
+            change_test = re.compile('^(\+|\!)\s.*')
+            difflines = filter(change_test.match, [line for line in differ])
+            if len(difflines) == 0:
+                err.write("Skipping %s, no additions\n" % ifot_time)
+                continue
+            else:
+                for line in difflines:
+                    err.write("%s" % line)
+            err.write("Processing %s\n" % ifot_time)
+                    
+        # and copy that load_segment file to testing/working directory
+        shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
+
+        # and copy that load_segment file to the 'last' file
+        shutil.copyfile(load_rdb, '%s/last_loads.rdb' % (outdir))
+
+        s.load_rdb = load_rdb
+        s.data_setup()
+
+        prefix = 'sosa_' + DateTime(ifot_time).date + '_'
+        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
+        # update_load_seg_db.py, update_cmd_states.py
+
+        s.run_at_time = ifot_time
+        s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+
+        text_files = s.output_text_files(prefix=prefix)
+        for etype in ['states','timelines']:
+            fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+            match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+            if match:
+                assert True
+            else:
+                assert False
+
+
+
+    # write out everything in the the timelines and states..
+    # doesn't use output_text_files, because I don't want the
+    # date ranges from the last rdb, I just want everything
+
+    dbh = s.db_handle()
+    prefix='sosa_trans_'
+
+    text_files = s.output_text_files(prefix=prefix, get_all=True)
+
+    for etype in ['states','timelines']:
+        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
+        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
+        if match:
+            assert True
+        else:
+            assert False
+    
+    s.cleanup()
+
+
+
+
+# 'test' isn't in the name to skip using this as a nosetest by default.
+# It just takes too long.
+def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
 
     # Simulate timelines and cmd_states for all of 2010
 
@@ -1161,40 +1330,7 @@ def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
     dbh = s.db_handle()
     prefix='all_'
 
-    timelines = dbh.fetchall("""select * from timelines""")
-
-    tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
-    pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
-
-    test_states = dbh.fetchall("""select * from cmd_states
-                                  where datestart >= '%s'
-                                  and datestop <= '%s'
-                                  order by datestart""" % (timelines[0]['datestart'],
-                                                           timelines[-1]['datestop'] ))
-
-    fmt = {'power': '%.1f',
-           'pitch': '%.2f',
-           'tstart': '%.2f',
-           'tstop': '%.2f',
-           'ra': '%.2f',
-           'dec' : '%.2f',
-           'roll' : '%.2f',
-           'q1' : '%.2f',
-           'q2' : '%.2f',
-           'q3' : '%.2f',
-           'q4' : '%.2f',
-           }
-
-
-    newcols = sorted(list(test_states.dtype.names))
-    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
-    newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
-    
-    sfile = os.path.join( outdir, prefix+'test_states.dat')
-    pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-    
-    text_files = { 'states' : sfile,
-                   'timelines' : tfile }
+    text_files = s.output_text_files(prefix=prefix, get_all=True)
 
     for etype in ['states','timelines']:
         fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
@@ -1203,7 +1339,7 @@ def test_all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
             assert True
         else:
             assert False
-    
+
     s.cleanup()
 
 
