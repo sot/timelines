@@ -277,7 +277,7 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     # get existing entries
     db_timelines = dbh.fetchall("""select * from timelines 
                                    where datestop >= '%s'
-                                   order by datestart,load_segment_id 
+                                   order by datestart, load_segment_id 
                                    """ % ( timelines[0]['datestart']))
        
     if len(db_timelines) > 0:
@@ -457,20 +457,21 @@ def get_last_timeline(dbh=None):
     return timeline
 
                                
-def find_load_seg_changes(want, have, exclude=[]):
+def find_load_seg_changes(wants, haves, exclude=[]):
     
     to_delete = []
     to_insert = []
     # Find mismatches:
-    match_cols = [x[0] for x in have.dtype.descr if 'f' not in x[1]]
+    match_cols = [x[0] for x in haves.dtype.descr if 'f' not in x[1]]
     [match_cols.remove(col) for col in exclude]
-    # use min( ... ) to only check through the range that is in both lists
+    # Use explicity increment for i_diff so that it gets set to the 
+    # index of the first not-matching entry, or if wants is longer than
+    # haves (the usual append condition) it gets set to the index of
+    # the first new entry in wants.
     i_diff = 0
-    for want_entry, have_entry in izip(want, have):
+    for want_entry, have_entry in izip(wants, haves):
         # does the db load match?
         if (any(have_entry[x] != want_entry[x] for x in match_cols) ):
-            #log.info('%s INFO: Mismatch from ifot datestart %s load %s' 
-            #         % ( check_name, want_entry['datestart'], want_entry['load_segment']))
             log.info('LOAD_SEG INFO: Mismatch on these entries:')
             log.info(want_entry)
             log.info(have_entry)
@@ -479,15 +480,19 @@ def find_load_seg_changes(want, have, exclude=[]):
 
     if i_diff == 0:
         raise ValueError("Unexpected mismatch at first database entry in range")
+    
+    # if i_diff incremented past the end of both lists because
+    # they match and have the same length, the if i_diff < len() 
+    # statements below will return False.
 
-    if i_diff < len(have):
-        at_after_match = (have['datestart'] >= have[i_diff]['datestart'])
-        to_delete = have[at_after_match]
+    # if there is a mismatch, return entries to be removed
+    if i_diff < len(haves):
+        to_delete = haves[i_diff:]
+    # if there is either a mismatch or new entries, return the 
+    # entries to-be-inserted
+    if i_diff < len(wants):
+        to_insert = wants[i_diff:]
 
-    if i_diff < len(want):
-        i_diff_datestart = want[i_diff]['datestart']
-        i_diff_date_match = want['datestart'] >= i_diff_datestart
-        to_insert = want[i_diff_date_match]
     return to_delete, to_insert
 
 
@@ -519,7 +524,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
 
     db_loads = dbh.fetchall("""select * from load_segments 
                                where datestart >= '%s' 
-                               order by datestart,load_scs """ % (
+                               order by datestart, load_scs""" % (
                                ifot_loads[0]['datestart'],
                                )
                             )

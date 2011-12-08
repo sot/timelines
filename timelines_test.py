@@ -712,6 +712,19 @@ def test_load_update_truncate():
     assert to_delete[0]['datestart'] == want_loads[10]['datestart']
     assert to_insert[0]['datestart'] == want_loads[10]['datestart']
 
+def test_load_update_sosa_truncate():
+    # if an old entry is now truncated, it and all after should be replaced
+    # but the first entry of a sosa pair should not be removed if it is before the difference
+    db_loads = asciitable.read('t/post_sosa_db_loads.txt')
+    want_load_rdb = asciitable.read('t/second_sosa.rdb')
+    want_loads = update_load_seg_db.rdb_to_db_schema(want_load_rdb)
+    want_loads[12]['datestop'] = '2011:338:00:00:00.000'
+    to_delete, to_insert = update_load_seg_db.find_load_seg_changes(want_loads, db_loads, exclude=['id']) 
+    assert len(to_delete) == 11
+    assert len(to_insert) == 11
+    assert to_delete[0]['datestart'] == want_loads[12]['datestart']
+    assert to_insert[0]['datestart'] == want_loads[12]['datestart']
+
 
 
 def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
