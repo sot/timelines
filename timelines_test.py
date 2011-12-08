@@ -397,29 +397,34 @@ class Scenario(object):
         err.write("Updated Test States in %s\n" % outdir )
         return
 
-    def output_text_files(self, prefix=''):
+    def output_text_files(self, prefix='', get_all=False):
 
         load_rdb = self.load_rdb
         outdir = self.outdir
         dbh = self.db_handle()
         
-        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
-        datestart = loads[0]['TStart (GMT)']
-        datestop = loads[-1]['TStop (GMT)']
+        if not get_all:
+            loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+            datestart = loads[0]['TStart (GMT)']
+            datestop = loads[-1]['TStop (GMT)']
 
-        timelines = dbh.fetchall("""select * from timelines
-                                    where datestart >= '%s'
-                                    and datestop <= '%s'
-                                    order by datestart""" % (datestart, datestop))
+            timelines = dbh.fetchall("""select * from timelines
+                                        where datestart >= '%s'
+                                        and datestop <= '%s'
+                                        order by datestart,load_segment_id""" % (datestart, datestop))
+            test_states = dbh.fetchall("""select * from cmd_states
+                                     where datestart >= '%s'
+                                     and datestop <= '%s'
+                                     order by datestart""" % (datestart, datestop ))
+        else:
+            timelines = dbh.fetchall("""select * from timelines
+                                        order by datestart, load_segment_id""")
+            test_states = dbh.fetchall("""select * from cmd_states
+                                     order by datestart""")
 
 
         tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
         pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
-
-        test_states = dbh.fetchall("""select * from cmd_states
-                                     where datestart >= '%s'
-                                     and datestop <= '%s'
-                                     order by datestart""" % (datestart, datestop ))
 
         fmt = {'power': '%.1f',
                'pitch': '%.2f',
@@ -435,7 +440,6 @@ class Scenario(object):
                }
 
 
-
         newcols = sorted(list(test_states.dtype.names))
         newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
         newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
@@ -443,18 +447,23 @@ class Scenario(object):
         sfile = os.path.join( outdir, prefix+'test_states.dat')
         pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
 
-        cmds = dbh.fetchall("""select * from cmds
+        # get the commands not associated with a timeline for the interval 
+        # of interest
+        null_cmds = dbh.fetchall("""select * from cmds
                               where date >= '%s'
                               and date <= '%s'
                               and timeline_id is NULL
-                              order by date""" % (datestart, datestop ))
+                              order by date""" % (timelines[0]['datestart'], 
+                                                  timelines[-1]['datestop'] ))
 
-        err.write("%s %s\n" % (datestart, datestop))
         try:
-            cmds = cmds.tolist()
+            null_cmds = null_cmds.tolist()
         except AttributeError:
             pass
 
+        # start off with the null commands and then insert all of the
+        # timeline-associated commands by timeline id
+        cmds = null_cmds
         for tl in timelines:
             tl_cmds = dbh.fetchall("""select * from cmds
                                      where timeline_id = %d
@@ -470,7 +479,6 @@ class Scenario(object):
         cfile =  os.path.join( outdir, prefix+'test_cmds.dat')        
         pprint(cmds, out=open(cfile, 'w'))
 
-        
         self.text_files =  { 'timelines': tfile,
                              'states': sfile,
                              'cmds': cfile }
@@ -1184,40 +1192,7 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
     dbh = s.db_handle()
     prefix='sosa_trans_'
 
-    timelines = dbh.fetchall("""select * from timelines""")
-
-    tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
-    pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
-
-    test_states = dbh.fetchall("""select * from cmd_states
-                                  where datestart >= '%s'
-                                  and datestop <= '%s'
-                                  order by datestart""" % (timelines[0]['datestart'],
-                                                           timelines[-1]['datestop'] ))
-
-    fmt = {'power': '%.1f',
-           'pitch': '%.2f',
-           'tstart': '%.2f',
-           'tstop': '%.2f',
-           'ra': '%.2f',
-           'dec' : '%.2f',
-           'roll' : '%.2f',
-           'q1' : '%.2f',
-           'q2' : '%.2f',
-           'q3' : '%.2f',
-           'q4' : '%.2f',
-           }
-
-
-    newcols = sorted(list(test_states.dtype.names))
-    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
-    newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
-    
-    sfile = os.path.join( outdir, prefix+'test_states.dat')
-    pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-    
-    text_files = { 'states' : sfile,
-                   'timelines' : tfile }
+    text_files = s.output_text_files(prefix=prefix, get_all=True)
 
     for etype in ['states','timelines']:
         fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
@@ -1342,40 +1317,7 @@ def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
     dbh = s.db_handle()
     prefix='all_'
 
-    timelines = dbh.fetchall("""select * from timelines""")
-
-    tfile = os.path.join( outdir,  prefix+'test_timelines.dat')
-    pprint(timelines, cols=['datestart','datestop','dir'], out=open(tfile, 'w'))
-
-    test_states = dbh.fetchall("""select * from cmd_states
-                                  where datestart >= '%s'
-                                  and datestop <= '%s'
-                                  order by datestart""" % (timelines[0]['datestart'],
-                                                           timelines[-1]['datestop'] ))
-
-    fmt = {'power': '%.1f',
-           'pitch': '%.2f',
-           'tstart': '%.2f',
-           'tstop': '%.2f',
-           'ra': '%.2f',
-           'dec' : '%.2f',
-           'roll' : '%.2f',
-           'q1' : '%.2f',
-           'q2' : '%.2f',
-           'q3' : '%.2f',
-           'q4' : '%.2f',
-           }
-
-
-    newcols = sorted(list(test_states.dtype.names))
-    newcols = [ x for x in newcols if (x != 'tstart') & (x != 'tstop')]
-    newstates = np.rec.fromarrays([test_states[x] for x in newcols], names=newcols)
-    
-    sfile = os.path.join( outdir, prefix+'test_states.dat')
-    pprint(newstates, fmt=fmt, out=open(sfile, 'w'))
-    
-    text_files = { 'states' : sfile,
-                   'timelines' : tfile }
+    text_files = s.output_text_files(prefix=prefix, get_all=True)
 
     for etype in ['states','timelines']:
         fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
@@ -1384,7 +1326,7 @@ def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
             assert True
         else:
             assert False
-    
+
     s.cleanup()
 
 
