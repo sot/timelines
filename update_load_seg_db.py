@@ -236,7 +236,8 @@ def get_ref_timelines( datestart, dbh=None, n=10):
     return ref_timelines
 
 
-def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
+def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False,
+                         max_id=0):
     """
     Given a list of load segments this routine determines the timelines (mission
     planning weeks and loads etc) over the loads and inserts new timelines 
@@ -258,8 +259,6 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
 
     as_run = loads
     as_run = sorted(as_run, key=lambda k: k['datestart'])
-
-    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
 
     log.info("TIMELINES INFO: Updating timelines for range %s to %s" 
              % ( as_run[0]['datestart'], as_run[-1]['datestop']))
@@ -321,22 +320,20 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
             clear_timeline( id, dbh=dbh, dryrun=dryrun )
         
     # Insert new timelines[i_diff:] 
-
-
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
                   (i_diff, len(timelines)+1))
+    t_count = 1
     for timeline in timelines[i_diff:]:
         log.debug('TIMELINES DEBUG: inserting timeline:')
         insert_string = "\t %s %s %s" % ( timeline['dir'], 
                                              timeline['datestart'], timeline['datestop'], 
                                              )
         log.debug(insert_string)
-        timeline['id'] = max_id + 1
+        timeline['id'] = max_id + t_count
         timeline['fixed_by_hand'] = 0
-        max_id = timeline['id']
         if not dryrun:
             dbh.insert(timeline, 'timelines')
-
+        t_count += 1
 
 def rdb_to_db_schema( orig_ifot_loads ):
     """
@@ -568,18 +565,17 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
     #              (i_diff, len(ifot_loads)+1))
 
-    
+    load_count = 1
     for load in to_insert:
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'], load['load_scs'] )
         log.debug(insert_string)
         load_dict = dict(zip(load.dtype.names, load))
-        load_dict['id'] = max_id + 1;
-        max_id = load_dict['id']
+        load_dict['id'] = max_id + load_count;
         if not dryrun:
             dbh.insert(load_dict, 'load_segments', commit=True)
-            
+        load_count += 1
     return to_insert
 
     
@@ -627,12 +623,15 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
         # make any scripted edits to the load segments table
         import fix_load_segments
         ifot_loads = fix_load_segments.repair(ifot_loads)
+        max_timelines_id = dbh.fetchone(
+            'SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
         update_loads_db( ifot_loads, dbh=dbh, test=test, dryrun=dryrun )    
         db_loads = dbh.fetchall("""select * from load_segments 
                                    where datestart >= '%s' order by datestart   
                                   """ % ( ifot_loads[0]['datestart'] )
                                 )
-        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=dryrun, test=test )
+        update_timelines_db(loads=db_loads, dbh=dbh, dryrun=dryrun, test=test, 
+                            max_id=max_timelines_id)
 
     log.removeHandler(ch)
 
