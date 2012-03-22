@@ -259,6 +259,8 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
     as_run = loads
     as_run = sorted(as_run, key=lambda k: k['datestart'])
 
+    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
+
     log.info("TIMELINES INFO: Updating timelines for range %s to %s" 
              % ( as_run[0]['datestart'], as_run[-1]['datestop']))
 
@@ -319,7 +321,7 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
             clear_timeline( id, dbh=dbh, dryrun=dryrun )
         
     # Insert new timelines[i_diff:] 
-    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
+
 
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
                   (i_diff, len(timelines)+1))
@@ -522,6 +524,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
+    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
     db_loads = dbh.fetchall("""select * from load_segments 
                                where datestart >= '%s' 
                                order by datestart, load_scs""" % (
@@ -565,7 +568,6 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
     #              (i_diff, len(ifot_loads)+1))
 
-    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
     
     for load in to_insert:
         log.debug('LOAD_SEG DEBUG: inserting load')
