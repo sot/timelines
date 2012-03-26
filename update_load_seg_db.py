@@ -286,11 +286,13 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False,
         for timeline in  timelines:
             # if there is an entry in the database already that
             # a) has the same datestart
-            # b) is shorter or the same length
+            # b) has the same load_segment
+            # c) is shorter or the same length
             # then there is a match, and skip along to the next one
             startmatch = timeline['datestart'] == db_timelines['datestart']
+            lsmatch = timeline['load_segment_id'] == db_timelines['load_segment_id']
             endmatch = timeline['datestop'] >= db_timelines['datestop'] 
-            if not any( startmatch & endmatch ):
+            if not any( startmatch & lsmatch & endmatch ):
                 break
             i_diff += 1
     else:
