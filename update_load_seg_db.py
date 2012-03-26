@@ -236,8 +236,7 @@ def get_ref_timelines( datestart, dbh=None, n=10):
     return ref_timelines
 
 
-def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False,
-                         max_id=0):
+def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
     """
     Given a list of load segments this routine determines the timelines (mission
     planning weeks and loads etc) over the loads and inserts new timelines 
@@ -630,8 +629,8 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
                                    where datestart >= '%s' order by datestart   
                                   """ % ( ifot_loads[0]['datestart'] )
                                 )
-        update_timelines_db(loads=db_loads, dbh=dbh, dryrun=dryrun, test=test, 
-                            max_id=max_timelines_id)
+        update_timelines_db(loads=db_loads, dbh=dbh, max_id=max_timelines_id,
+                            dryrun=dryrun, test=test)
 
     log.removeHandler(ch)
 
