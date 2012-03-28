@@ -520,6 +520,8 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
                          % min_time_datestart )
 
     max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
+    if max_id == 0 and test == False:
+        raise ValueError("LOAD SEG: no load_segments in database.")
     db_loads = dbh.fetchall("""select * from load_segments 
                                where datestart >= '%s' 
                                order by datestart, load_scs""" % (
@@ -622,6 +624,8 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
         ifot_loads = fix_load_segments.repair(ifot_loads)
         max_timelines_id = dbh.fetchone(
             'SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
+        if max_timelines_id == 0 and test == False:
+            raise ValueError("TIMELINES: no timelines in database.")
         update_loads_db( ifot_loads, dbh=dbh, test=test, dryrun=dryrun )    
         db_loads = dbh.fetchall("""select * from load_segments 
                                    where datestart >= '%s' order by datestart   
