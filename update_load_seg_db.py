@@ -321,14 +321,13 @@ def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
     # Insert new timelines[i_diff:] 
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
                   (i_diff, len(timelines)+1))
-    first_new_id = max_id + 1
     for t_count, timeline in enumerate(timelines[i_diff:]):
         log.debug('TIMELINES DEBUG: inserting timeline:')
         insert_string = "\t %s %s %s" % ( timeline['dir'], 
                                              timeline['datestart'], timeline['datestop'], 
                                              )
         log.debug(insert_string)
-        timeline['id'] = first_new_id + t_count
+        timeline['id'] = max_id + 1 + t_count
         timeline['fixed_by_hand'] = 0
         if not dryrun:
             dbh.insert(timeline, 'timelines')
@@ -565,14 +564,13 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
     #              (i_diff, len(ifot_loads)+1))
 
-    first_new_id = max_id + 1
     for load_count, load in enumerate(to_insert):
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'], load['load_scs'] )
         log.debug(insert_string)
         load_dict = dict(zip(load.dtype.names, load))
-        load_dict['id'] = first_new_id + load_count;
+        load_dict['id'] = max_id + 1 + load_count;
         if not dryrun:
             dbh.insert(load_dict, 'load_segments', commit=True)
     return to_insert
