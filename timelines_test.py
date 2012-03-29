@@ -1219,6 +1219,48 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
     s.cleanup()
 
 
+def test_reinsert(outdir='t/reinsert', cmd_state_ska=os.environ['SKA']):
+
+    # Fixing the database for the command collision bugs in March 2012
+    # revealed another bug whereby 2 timelines are not reinserted for 2 new
+    # load segments because there is already 1 matching timeline.
+    # Test added to prevent recurrence.
+
+    err.write("Running reinsert simulation \n")
+    s = Scenario(outdir)
+    s.db_setup()
+
+    # use a clone of the load_segments "time machine"
+    load_rdb = 't/2012:082:15:57:01.000.rdb'
+
+    # make a local copy of nonload_cmds_archive,
+    # which will be modified in test directory by interrupt
+    shutil.copyfile('t/nsm_nonload_cmds_archive.py',
+                    '%s/nonload_cmds_archive.py' % outdir)
+    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
+
+    s.load_rdb = load_rdb
+    s.run_at_time = '2012:082:15:57:01.000'
+    s.data_setup()
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    dbh = s.db_handle()
+    first_timelines = dbh.fetchall("select * from timelines")
+
+    load_segments = dbh.fetchall("select * from load_segments")
+    ls = load_segments[19]
+    mock_datestart = DateTime(DateTime(ls['datestart']).secs + 1).date
+    dbh.execute("update load_segments set datestart = '%s' where id = %d"
+                % (mock_datestart, ls['id']))
+    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
+    second_timelines = dbh.fetchall("select * from timelines")
+    # these should just all be the same
+    match_cols = ['dir', 'datestart', 'datestop']
+    for want_entry, have_entry in izip(first_timelines, second_timelines):
+        if any(have_entry[x] != want_entry[x] for x in match_cols):
+            assert False
+
+
+
 
 
 # 'test' isn't in the name to skip using this as a nosetest by default.
