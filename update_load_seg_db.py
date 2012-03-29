@@ -236,7 +236,7 @@ def get_ref_timelines( datestart, dbh=None, n=10):
     return ref_timelines
 
 
-def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
+def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
     """
     Given a list of load segments this routine determines the timelines (mission
     planning weeks and loads etc) over the loads and inserts new timelines 
@@ -319,22 +319,18 @@ def update_timelines_db( loads=None, dbh=None, dryrun=False, test=False ):
             clear_timeline( id, dbh=dbh, dryrun=dryrun )
         
     # Insert new timelines[i_diff:] 
-    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
-
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
                   (i_diff, len(timelines)+1))
-    for timeline in timelines[i_diff:]:
+    for t_count, timeline in enumerate(timelines[i_diff:]):
         log.debug('TIMELINES DEBUG: inserting timeline:')
         insert_string = "\t %s %s %s" % ( timeline['dir'], 
                                              timeline['datestart'], timeline['datestop'], 
                                              )
         log.debug(insert_string)
-        timeline['id'] = max_id + 1
+        timeline['id'] = max_id + 1 + t_count
         timeline['fixed_by_hand'] = 0
-        max_id = timeline['id']
         if not dryrun:
             dbh.insert(timeline, 'timelines')
-
 
 def rdb_to_db_schema( orig_ifot_loads ):
     """
@@ -522,6 +518,9 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
         raise ValueError("Attempting to update loads before %s" 
                          % min_time_datestart )
 
+    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
+    if max_id == 0 and test == False:
+        raise ValueError("LOAD SEG: no load_segments in database.")
     db_loads = dbh.fetchall("""select * from load_segments 
                                where datestart >= '%s' 
                                order by datestart, load_scs""" % (
@@ -565,19 +564,15 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
     #              (i_diff, len(ifot_loads)+1))
 
-    max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
-    
-    for load in to_insert:
+    for load_count, load in enumerate(to_insert):
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
                                              load['datestart'], load['datestop'], load['load_scs'] )
         log.debug(insert_string)
         load_dict = dict(zip(load.dtype.names, load))
-        load_dict['id'] = max_id + 1;
-        max_id = load_dict['id']
+        load_dict['id'] = max_id + 1 + load_count;
         if not dryrun:
             dbh.insert(load_dict, 'load_segments', commit=True)
-            
     return to_insert
 
     
@@ -625,12 +620,17 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
         # make any scripted edits to the load segments table
         import fix_load_segments
         ifot_loads = fix_load_segments.repair(ifot_loads)
+        max_timelines_id = dbh.fetchone(
+            'SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
+        if max_timelines_id == 0 and test == False:
+            raise ValueError("TIMELINES: no timelines in database.")
         update_loads_db( ifot_loads, dbh=dbh, test=test, dryrun=dryrun )    
         db_loads = dbh.fetchall("""select * from load_segments 
                                    where datestart >= '%s' order by datestart   
                                   """ % ( ifot_loads[0]['datestart'] )
                                 )
-        update_timelines_db( loads = db_loads, dbh=dbh, dryrun=dryrun, test=test )
+        update_timelines_db(loads=db_loads, dbh=dbh, max_id=max_timelines_id,
+                            dryrun=dryrun, test=test)
 
     log.removeHandler(ch)
 
