@@ -7,6 +7,9 @@ import difflib
 import shutil
 import mx.DateTime
 import numpy as np
+import mercurial.ui
+import mercurial.hg
+import mercurial.commands
 from itertools import count, izip
 from Ska.Shell import bash_shell, bash
 import Ska.DBI
@@ -26,6 +29,25 @@ SKA = os.environ['SKA']
 verbose = True
 DBI = 'sybase'
 cleanup = True
+
+
+def time_machine_update(date):
+    """
+    Clone the arc ifot time machine as needed and
+    update to the version before the requested date.
+    """
+    mxdate = DateTime(date).mxDateTime
+    hg_time_str = "%s%s" % ('<', mxdate.strftime())
+    hg_ui = mercurial.ui.ui()
+    # use a clone of the arc "time machine"
+    tm = 'iFOT_time_machine'
+    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
+    # just make the time machine repo in the current directory
+    if not os.path.exists(tm):
+        mercurial.hg.clone(hg_ui, repo_dir, tm)
+    repo = mercurial.hg.repository(hg_ui, tm)
+    mercurial.commands.update(hg_ui, repo, date=hg_time_str)
+
 
 def pprint(recarray, fmt=None, cols=None, out=sys.stdout):
     """
@@ -739,9 +761,6 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
 
     # use a clone of the load_segments "time machine"
     tm = 'iFOT_time_machine'
-    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
-    if not os.path.exists(tm):
-        c_output = bash_shell("hg clone %s" % repo_dir)
     load_rdb = os.path.join(tm, 'load_segment.rdb')
     
     # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
@@ -757,15 +776,7 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
 
     for hour_step in np.arange( 0, 72, step):
         ifot_time = start_time + mx.DateTime.DateTimeDelta(0,hour_step)
-        # mercurial python stuff doesn't seem to work.
-        # grab version of iFOT_time_machine just before simulated date
-        
-        os.chdir(tm)
-        err.write("""hg update --date "%s%s" """ % (
-                '<', ifot_time.strftime()))
-        u_output = bash_shell("""hg update --date "%s%s" """ % (
-            '<', ifot_time.strftime()))
-        os.chdir("..")
+        time_machine_update(ifot_time)
 
         # and copy that load_segment file to testing/working directory
         shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
@@ -1127,9 +1138,6 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
 
     # use a clone of the load_segments "time machine"
     tm = 'iFOT_time_machine'
-    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
-    if not os.path.exists(tm):
-        c_output = bash_shell("hg clone %s" % repo_dir)
     load_rdb = os.path.join(tm, 'load_segment.rdb')
     
     # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
@@ -1144,14 +1152,7 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
 
     for day_step in np.arange( 0, 5, step):
         ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
-        # mercurial python stuff doesn't seem to work.
-        # grab version of iFOT_time_machine just before simulated date
-        
-        os.chdir(tm)
-        u_output = bash_shell("""hg update --date "%s%s" """ % (
-            '<', ifot_time.strftime()))
-        os.chdir("..")
-
+        time_machine_update(ifot_time)
 
         # but do some extra work to skip running the whole process on days when
         # there are no updates from the load segments table
@@ -1234,9 +1235,6 @@ def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
 
     # use a clone of the load_segments "time machine"
     tm = 'iFOT_time_machine'
-    repo_dir = '/proj/sot/ska/data/arc/%s/' % tm
-    if not os.path.exists(tm):
-        c_output = bash_shell("hg clone %s" % repo_dir)
     load_rdb = os.path.join(tm, 'load_segment.rdb')
     
     # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
@@ -1253,14 +1251,7 @@ def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
 
     for day_step in np.arange( 0, 365, step):
         ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
-        # mercurial python stuff doesn't seem to work.
-        # grab version of iFOT_time_machine just before simulated date
-        
-        os.chdir(tm)
-        u_output = bash_shell("""hg update --date "%s%s" """ % (
-            '<', ifot_time.strftime()))
-        os.chdir("..")
-
+        time_machine_update(ifot_time)
 
         # run the interrupt commanding before running the rest of the commands
         # if the current time is the first simulated cron pass after the
