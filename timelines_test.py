@@ -18,6 +18,7 @@ import asciitable
 from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
+import tables
 
 #from Ska.Numpy import pprint
 
@@ -182,8 +183,8 @@ def text_compare( testfile, fidfile, outdir, label):
         diff = htmldiff.make_file( fiducial_lines, test_lines, context=True )
         diff_out.writelines(diff)
         return False
+
     return True
-        
 
 
 class Scenario(object):
@@ -193,6 +194,7 @@ class Scenario(object):
 
     def __init__(self, outdir, dbi=DBI):
         self.outdir = outdir # where to put everything
+        self.h5file = os.path.join(self.outdir, 'cmd_states.h5')
         self.dbi = dbi # which dbi
         self.db_initialized = False # have we created the tables
         self.first_npnt_state = None # have we copied over the states before first NPNT and have a npnt state
@@ -313,6 +315,29 @@ class Scenario(object):
 
         self.db_initialized = True
         
+    def check_hdf5_sql_consistent(self):
+        """Check that all HDF5 string and int values match corresponding SQL
+        values.
+        """
+        h5 = tables.openFile(self.h5file, mode='r')
+        db = self.db_handle()
+        sql_rows = db.fetchall('select * from cmd_states')
+        h5_rows = h5.root.data[:]
+        # just check string and int cols
+        colnames = ('datestart', 'datestop', 'obsid', 'power_cmd', 'si_mode', 'pcad_mode',
+                    'vid_board', 'clocking', 'fep_count', 'ccd_count', 'trans_keys',
+                    'hetg', 'letg', 'dither')
+        for name in colnames:
+            match = np.all(sql_rows[name] == h5_rows[name])
+            if not match:
+                err.write('FAILED MATCH for {}\n'.format(name))
+                err.write('SQL: {}\n'.format(sql_rows[name]))
+                err.write('HDF5: {}\n'.format(h5_rows[name]))
+                return False
+
+        err.write('All HDF5 string and int values match corresponding SQL values\n')
+        h5.close()
+        return True
 
     def populate_states( self,
                          nonload_cmd_file=None, verbose=False ):
@@ -410,12 +435,14 @@ class Scenario(object):
 
         update_cmd_states = os.path.join(os.environ['SKA'], 'share',
                                          'cmd_states', 'update_cmd_states.py')
-        cmd_state_cmd = "%s %s --datestart '%s' --mp_dir %s" % (
-            update_cmd_states, db_str, cmd_state_datestart, mp_dir)
+        if os.path.exists(self.h5file):
+            os.unlink(self.h5file)
+        cmd_state_cmd = "%s %s --datestart '%s' --mp_dir %s --h5file %s" % (
+            update_cmd_states, db_str, cmd_state_datestart, mp_dir, self.h5file)
 
         err.write("Running %s\n" % cmd_state_cmd)
-        bash(cmd_state_cmd)
-
+        out = bash(cmd_state_cmd)
+        err.write('\n'.join(out) + '\n\n')
         err.write("Updated Test States in %s\n" % outdir )
         return
 
@@ -526,10 +553,8 @@ def check_load(load_rdb, state_file, expect_match=True):
     text_files = s.output_text_files()
     for etype in ['states',]:
         match = text_compare(text_files[etype], state_file, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
+        assert match
+    assert s.check_hdf5_sql_consistent()
     s.cleanup()
 
 
