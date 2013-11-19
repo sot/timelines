@@ -360,11 +360,11 @@ def rdb_to_db_schema( orig_ifot_loads ):
     return load_recs
 
 
-def check_load_overlap( loads ):
+def check_load_overlap( loads, max_sep_hours=36):
     """
     Checks command load segment overlap
 
-    Logs warnings for : separation greater than 6 hours
+    Logs warnings for : separation greater than max_sep_hours hours
                         any overlap in the same SCS    
                         
     :param loads: recarray of load segments
@@ -373,12 +373,11 @@ def check_load_overlap( loads ):
 
     sep_times = ( DateTime(loads[1:]['datestart']).secs 
                   - DateTime(loads[:-1]['datestop']).secs )
-    max_sep_hours = 12
     max_sep = max_sep_hours * 60 * 60
     # check for too much sep
     if (any(sep_times > max_sep )):
         for load_idx in np.flatnonzero(sep_times > max_sep):
-            log.warn('LOAD_SEG WARN: Loads %s %s separated by more that %i hours' 
+            log.warn('LOAD_SEG WARN: Loads %s %s separated by more than %i hours' 
                          % (loads[load_idx]['load_segment'],
                             loads[load_idx+1]['load_segment'],
                             max_sep_hours ))
