@@ -196,7 +196,7 @@ def weeks_for_load( run_load, dbh=None, test=False ):
         if (run_load['datestart'] < processed['processing_tstart']
             and run_load['datestop'] <= processed['processing_tstop']):
             replan_dir = get_replan_dir( processed['replan_cmds'], run_load['year'], dbh=dbh )
-            log.warn("TIMELINES WARN: %s,%s is replan/reopen, using %s dir for imported cmds" % (
+            log.info("TIMELINES INFO: %s,%s is replan/reopen, using %s dir for imported cmds" % (
                 run_load['year'], run_load['load_segment'], replan_dir ))
             # the end
             match['datestart'] = processed['processing_tstart']
