@@ -543,13 +543,14 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     else:
         to_delete, to_insert = find_load_seg_changes(ifot_loads, db_loads, exclude=['id'])
 
-    if (not len(to_delete) and not len(to_insert)):
-        log.info('LOAD_SEG INFO: No database update required')
-
     later_loads = dbh.fetchall("select * from load_segments where datestart >= '%s'"
                                % ifot_loads[-1]['datestop'])
     if len(later_loads) != 0:
         log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
+
+    if (not len(to_delete) and not len(to_insert)):
+        log.info('LOAD_SEG INFO: No database update required')
+        return to_insert
 
     clear_rel_timelines(to_delete, dbh=dbh, dryrun=dryrun)
     if not dryrun:
