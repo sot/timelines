@@ -360,11 +360,11 @@ def rdb_to_db_schema( orig_ifot_loads ):
     return load_recs
 
 
-def check_load_overlap( loads ):
+def check_load_overlap( loads, max_sep_hours=36):
     """
     Checks command load segment overlap
 
-    Logs warnings for : separation greater than 6 hours
+    Logs warnings for : separation greater than max_sep_hours hours
                         any overlap in the same SCS    
                         
     :param loads: recarray of load segments
@@ -373,12 +373,11 @@ def check_load_overlap( loads ):
 
     sep_times = ( DateTime(loads[1:]['datestart']).secs 
                   - DateTime(loads[:-1]['datestop']).secs )
-    max_sep_hours = 12
     max_sep = max_sep_hours * 60 * 60
     # check for too much sep
     if (any(sep_times > max_sep )):
         for load_idx in np.flatnonzero(sep_times > max_sep):
-            log.warn('LOAD_SEG WARN: Loads %s %s separated by more that %i hours' 
+            log.warn('LOAD_SEG WARN: Loads %s %s separated by more than %i hours' 
                          % (loads[load_idx]['load_segment'],
                             loads[load_idx+1]['load_segment'],
                             max_sep_hours ))
@@ -543,13 +542,14 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     else:
         to_delete, to_insert = find_load_seg_changes(ifot_loads, db_loads, exclude=['id'])
 
-    if (not len(to_delete) and not len(to_insert)):
-        log.info('LOAD_SEG INFO: No database update required')
-
     later_loads = dbh.fetchall("select * from load_segments where datestart >= '%s'"
                                % ifot_loads[-1]['datestop'])
     if len(later_loads) != 0:
         log.warn("LOAD_SEG WARN: Loads exist in db AFTER update range!!!")
+
+    if (not len(to_delete) and not len(to_insert)):
+        log.info('LOAD_SEG INFO: No database update required')
+        return to_insert
 
     clear_rel_timelines(to_delete, dbh=dbh, dryrun=dryrun)
     if not dryrun:
