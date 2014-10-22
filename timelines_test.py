@@ -5,7 +5,6 @@ import re
 import tempfile
 import difflib
 import shutil
-import mx.DateTime
 import numpy as np
 import mercurial.ui
 import mercurial.hg
@@ -19,6 +18,7 @@ from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
 import tables
+import time
 
 #from Ska.Numpy import pprint
 
@@ -37,8 +37,7 @@ def time_machine_update(date):
     Clone the arc ifot time machine as needed and
     update to the version before the requested date.
     """
-    mxdate = DateTime(date).mxDateTime
-    hg_time_str = "%s%s" % ('<', mxdate.strftime())
+    hg_time_str = "<{}".format(time.strftime("%c", time.gmtime(DateTime(date).unix)))
     hg_ui = mercurial.ui.ui()
     # use a clone of the arc "time machine"
     tm = 'iFOT_time_machine'
@@ -107,7 +106,7 @@ def find_mp_files(loads):
     # get the modification times of the likely directories
     sumfile_modtimes = []
     for load in loads:
-        mx_date = DateTime(load['TStart (GMT)']).mxDateTime
+        tstart_date = DateTime(load['TStart (GMT)'])
         cl = load['LOADSEG.NAME']
         replan_query = """select tp.sumfile_modtime as sumfile_modtime, *
             from tl_processing as tp, tl_built_loads as tb
@@ -116,7 +115,7 @@ def find_mp_files(loads):
                          and tb.year = %d and tb.load_segment <= "%s"
                          and replan = 0
                          order by tp.sumfile_modtime desc
-                         """ % ( mx_date.year, cl )
+                         """ % ( int(tstart_date.frac_year), cl )
         replan_match = db.fetchone(replan_query)
         if replan_match:
             sumfile_modtimes.append(replan_match['sumfile_modtime'])
@@ -126,7 +125,7 @@ def find_mp_files(loads):
                          and tp.sumfile_modtime = tb.sumfile_modtime
                          and tb.year = %d and tb.load_segment = "%s"
                          order by tp.sumfile_modtime desc
-                         """ % ( mx_date.year, cl )
+                         """ % ( int(tstart_date.frac_year), cl )
         time_match = db.fetchone(max_query)
         if time_match:
             sumfile_modtimes.append(time_match['sumfile_modtime'])
@@ -402,9 +401,8 @@ class Scenario(object):
                 first_timeline['datestart'],
                 state['datestop']))
 
-            cmd_state_mxstart = ( DateTime( state['datestop'] ).mxDateTime
-                                  + mx.DateTime.TimeDelta( seconds=1) ) 
-            cmd_state_datestart = DateTime(cmd_state_mxstart).date
+            cmd_state_start = DateTime(state['datestop']).secs + 1
+            cmd_state_datestart = DateTime(cmd_state_start).date
 
             self.first_npnt_state = state
 
@@ -414,12 +412,10 @@ class Scenario(object):
             # unless the timelines don't go back a full ten days
             if self.run_at_time is None:
                 raise ValueError("self.run_at_time must be defined")
-            run_mxstart = ( DateTime(self.run_at_time).mxDateTime
-                            - mx.DateTime.DateTimeDeltaFromDays(10) )
-            npnt_mxstart = DateTime(self.first_npnt_state['datestop']).mxDateTime
-            cmd_state_mxstart = ( max(npnt_mxstart,run_mxstart)
-                                  + mx.DateTime.TimeDelta( seconds=1) ) 
-            cmd_state_datestart = DateTime(cmd_state_mxstart).date
+            run_start = DateTime(self.run_at_time) - 10
+            npnt_start = DateTime(self.first_npnt_state['datestop'])
+            cmd_state_start = max(npnt_start.secs, run_start.secs) + 1
+            cmd_state_datestart = DateTime(cmd_state_start).date
             print cmd_state_datestart
 
 
@@ -793,14 +789,14 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
     bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
 
     # when to begin simulation
-    start_time = mx.DateTime.Date(2010,5,30,2,0,0)
+    start_time = DateTime('2010:150:02:00:00.000')
     # load interrupt time
-    int_time = mx.DateTime.Date(2010,5,30,3,0,0)
+    int_time = DateTime('2010:150:03:00:00.000')
     # hours between simulated cron task to update timelines
     step = 12
 
     for hour_step in np.arange( 0, 72, step):
-        ifot_time = start_time + mx.DateTime.DateTimeDelta(0,hour_step)
+        ifot_time = start_time.secs + hour_step * 3600
         time_machine_update(ifot_time)
 
         # and copy that load_segment file to testing/working directory
@@ -814,8 +810,8 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
         # run the interrupt commanding before running the rest of the commands
         # if the current time is the first simulated cron pass after the
         # actual insertion of the interrupt commands
-        dtime = ifot_time - int_time
-        if dtime.hours >= 0 and dtime.hours < step:
+        dtime = ifot_time - int_time.secs
+        if dtime / 3600. >= 0 and dtime / 3600. < step:
             err.write( "Performing interrupt \n")
             nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
                        + " --cmd-set nsm "
@@ -1170,13 +1166,13 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
     bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
 
     # when to begin simulation
-    start_time = mx.DateTime.Date(2011,11,30,0,0,0)
+    start_time = DateTime('2011:334:00:00:00.000')
 
     # days between simulated cron task to update timelines
     step = 1
 
     for day_step in np.arange( 0, 5, step):
-        ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
+        ifot_time = start_time + day_step
         time_machine_update(ifot_time)
 
         # but do some extra work to skip running the whole process on days when
@@ -1309,22 +1305,22 @@ def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
     bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
 
     # when to begin simulation
-    start_time = mx.DateTime.Date(2010,1,1,0,0,0)
+    start_time = DateTime('2010:001:00:00:00.000')
 
     # load interrupt time
-    int_time = mx.DateTime.Date(2010,5,30,4,0,0)
+    int_time = DateTime('2010:150:04:00:00.000')
     # days between simulated cron task to update timelines
     step = 1
 
     for day_step in np.arange( 0, 365, step):
-        ifot_time = start_time + mx.DateTime.DateTimeDeltaFromDays(day_step)
+        ifot_time = start_time + day_step
         time_machine_update(ifot_time)
 
         # run the interrupt commanding before running the rest of the commands
         # if the current time is the first simulated cron pass after the
         # actual insertion of the interrupt commands
-        dtime = ifot_time - int_time
-        if dtime.hours >= 0 and dtime.hours < 24:
+        dtime = ifot_time - int_time.secs
+        if dtime / 3600. >= 0 and dtime / 3600. < 24:
             err.write( "Performing interrupt \n")
             nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
                        + " --cmd-set nsm "

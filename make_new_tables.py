@@ -6,7 +6,6 @@ timeline_loads view.
 
 import os
 import time
-import mx.DateTime
 import Ska.DBI
 from Chandra.Time import DateTime
 
