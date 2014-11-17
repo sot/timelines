@@ -4,7 +4,6 @@ import os
 import sys
 import glob
 import re
-import mx.DateTime
 import logging
 from logging.handlers import SMTPHandler
 import numpy as np
@@ -208,8 +207,8 @@ def weeks_for_load( run_load, dbh=None, test=False ):
             match_load_pieces.append( match.copy() )
     else:
         # if the run load matches the times of the built load
-        if ( (DateTime(run_load['datestart']).mxDateTime >= ( DateTime(built['first_cmd_time']).mxDateTime))
-             & (DateTime(run_load['datestop']).mxDateTime <= ( DateTime(built['last_cmd_time']).mxDateTime))):
+        if ( (DateTime(run_load['datestart']).secs >= ( DateTime(built['first_cmd_time']).secs))
+             & (DateTime(run_load['datestop']).secs <= ( DateTime(built['last_cmd_time']).secs))):
             match['incomplete'] = 0
         # append even if incomplete
         match_load_pieces.append(match.copy())
@@ -305,10 +304,10 @@ def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
 
     # warn if timeline is shorter than an hour
     for run_timeline in timelines[i_diff:]:
-        time_length = DateTime(run_timeline['datestop']).mxDateTime - DateTime(run_timeline['datestart']).mxDateTime
-        if time_length.minutes < 60:
+        time_length = DateTime(run_timeline['datestop']).secs - DateTime(run_timeline['datestart']).secs
+        if time_length / 60. < 60:
             log.warn("TIMELINES WARN: short timeline at %s, %d minutes" % ( run_timeline['datestart'],
-                                                                            time_length.minutes ))
+                                                                            time_length / 60. ))
     # find all db timelines that start after the last valid one [i_diff-1]
     findcmd = ("""SELECT id from timelines 
                   WHERE datestart > '%s'
@@ -347,7 +346,7 @@ def rdb_to_db_schema( orig_ifot_loads ):
         starttime = DateTime(orig_load['TStart (GMT)'])
         load = ( 
                  orig_load['LOADSEG.NAME'],
-                 starttime.mxDateTime.year,
+                 int(starttime.frac_year),
                  orig_load['TStart (GMT)'],
                  orig_load['TStop (GMT)'],
                  orig_load['LOADSEG.SCS'],
