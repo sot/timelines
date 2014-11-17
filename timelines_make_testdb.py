@@ -4,7 +4,6 @@ import sys
 import time
 import re
 import tempfile
-import mx.DateTime
 import numpy as np
 from itertools import count, izip
 from Ska.Shell import bash_shell
