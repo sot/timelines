@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        table.diff {
+        font-family: sans-serif;
+        border:medium;
+        border-spacing: 1px;
+        }
+        table.diff td {
+        white-space: nowrap;
+        line-height: .2rem;
+        }
+        table.diff tr {
+        background-color: transparent;
+        }
+        .diff_header {background-color:#e0e0e0}
+        td.diff_header {text-align:right}
+        .diff_next {background-color:#c0c0c0}
+        .diff_add {background-color:#aaffaa}
+        .diff_chg {background-color:#ffff77}
+        .diff_sub {background-color:#ffaaaa}
+        span.diff_sub {
+
+        }
+
+    </style>
+{% endblock %}
+
+{% block body %}
+<body class="with-background">
+{% endblock %}
+
+{% block content %}
+<p><p>
+<h1 align="center"> Load Segment Changes </h1>
+
+<form action="" method="get">
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="right-label1" class="right inline">Start Time (file timestamp)</label>
+          <label for="right-label2" class="right inline">Stop Time (file timestamp)</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="right-label1" name="start_time"
+          value="{{start_time_date}}">
+          <input type="text" id="right-label2" name="stop_time"
+                 value="{{stop_time_date}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+      <input type="submit" value="Submit"  style="display: none;">
+</form>
+
+{% if htmldiff %}
+{{ htmldiff|safe }}
+
+    <table class="diff" summary="Legends">
+        <tr> <th colspan="2"> Legends </th> </tr>
+        <tr> <td> <table border="" summary="Colors">
+                      <tr><th> Colors </th> </tr>
+                      <tr><td class="diff_add">&nbsp;Added&nbsp;</td></tr>
+                      <tr><td class="diff_chg">Changed</td> </tr>
+                      <tr><td class="diff_sub">Deleted</td> </tr>
+                  </table></td>
+             <td> <table border="" summary="Links">
+                      <tr><th colspan="2"> Links </th> </tr>
+                      <tr><td>(f)irst change</td> </tr>
+                      <tr><td>(n)ext change</td> </tr>
+                      <tr><td>(t)op</td> </tr>
+                  </table></td> </tr>
+    </table>
+
+{% endif %}
+
+{% endblock %}
