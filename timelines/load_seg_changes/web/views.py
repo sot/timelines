@@ -1,6 +1,5 @@
 from django.views.generic import TemplateView
 
-from kadi import events
 from kadi.events.views import BaseView
 from Chandra.Time import DateTime
 
@@ -31,7 +30,7 @@ class LoadSegView(BaseView, TemplateView):
                 stop_time = None
                 context['stop_time_date'] = ''
 
-        from load_seg_changes import find_changes
+        from timelines.load_seg_changes import find_changes
         changes = find_changes(start=start_time, stop=stop_time)
 
         context['start_time_date'] = DateTime(changes['start']).date
