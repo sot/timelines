@@ -28,13 +28,21 @@ def get_options():
                       default='aca_test')
     parser.add_option("--database",
                       default='aca_tstdb')
+    parser.add_option("--cmds",
+                      action="store_true",
+                      help="Add cmds, cmd_intpars, and cmd_fltpars to output database")
+    parser.add_option("--cmd-states",
+                      action="store_true",
+                      help="Add cmd_states to output database")
     parser.add_option("--verbose",
                       action="store_true")
     parser.add_option('--wipe',
                       action="store_true")
     opt, args = parser.parse_args()
+
     if opt.user == 'aca_ops' or opt.database == 'aca':
         raise ValueError("make_new_tables should not be used on flight tables (user != aca_ops, database != aca)")
+
     return opt, args
 
 def main():
@@ -98,31 +106,42 @@ def main():
         bash("sqlite3 %s < sqlite_triggers.sql" % opt.server, )
     
 
-    if opt.tstart:
+    if not opt.tstart:
+        # Nothing more to do
+        return
 
-        ls_query = """select * from load_segments
-                      where datestart >= '%s' """ % ( DateTime(opt.tstart).date)
-        if opt.tstop:
-            ls_query += " and datestart <= '%s'" % DateTime(opt.tstop).date
-        
-        load_segments = syb.fetchall(ls_query)
+    datecols = ['datestart', 'datestart']
+    tables = ['load_segments', 'timelines']
 
-        t_query = """select * from timelines
-                      where datestart >= '%s' """ % ( DateTime(opt.tstart).date)
-        if opt.tstop:
-            t_query += " and datestart <= '%s'" % DateTime(opt.tstop).date
-        
-        timelines = syb.fetchall(t_query)
+    if opt.cmds:
+        tables.extend(['cmds', 'cmd_fltpars', 'cmd_intpars'])
+        datecols.extend(['time', None, None])
 
-        for ls in load_segments:
-            #        print 'Inserting ls %d:%s' % (ls['year'], ls['load_segment'])
-            db.insert(ls, 'load_segments')
+    if opt.cmd_states:
+        tables.append('cmd_states')
+        datecols.append('datestart')
 
-        for tl in timelines:
-            #        print 'Insert tl %s %s %d' % (tl['datestart'], tl['datestop'], tl['id'])
-            db.insert(tl, 'timelines')
+    for table, datecol in zip(tables, datecols):
+        query = 'select * from {}'.format(table)
 
-    
+        if datecol:
+            date = DateTime(opt.tstart)
+            datetime = getattr(date, 'date' if datecol == 'datestart' else 'secs')
+            query += ' where {} >= {!r}'.format(datecol, datetime)
+
+            if opt.tstop:
+                start = DateTime(opt.tstop)
+                datetime = getattr(date, 'date' if datecol == 'datestart' else 'time')
+                query += ' and datestart <= {!r}'.format(datecol, datetime)
+
+        print(query)
+        vals = syb.fetchall(query)
+
+        print('Writing output {} table'.format(table))
+        for val in vals:
+            db.insert(val, table, commit=(opt.dbi == 'sybase'))
+
+        db.commit()
 
 
 if __name__ == '__main__':
