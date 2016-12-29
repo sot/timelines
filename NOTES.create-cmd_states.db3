@@ -1,0 +1,4 @@
+To make the fresh sqlite3 version of relevant command states Sybase tables:
+
+$ ./make_new_tables.py --tstart=1999:001 --cmds --cmd-states  # takes a few minutes
+$ cp db_base.db3 $SKA/data/cmd_states/cmd_states.db3  # as "aca" user
