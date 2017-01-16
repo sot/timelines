@@ -576,9 +576,6 @@ class Scenario(object):
         return self.text_files
 
 
-
-
-
 def check_load(load_rdb, state_file, expect_match=True):
     """
     Setup testing db for a list of load segments
@@ -670,7 +667,7 @@ def test_get_built_load():
 def test_get_processing():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=False)
- 
+
     good = [dict(built_load={'file': 'C044_2301.sum',
                                'first_cmd_time': '2010:052:01:59:26.450',
                                'last_cmd_time': '2010:052:12:20:06.101',
@@ -722,6 +719,7 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
+
 def test_first_sosa_update():
     # for a plain update, sosa or not, nothing should be deleted
     # and new entries should be inserted
@@ -732,6 +730,7 @@ def test_first_sosa_update():
     assert len(to_delete) == 0
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
     assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
+
 
 def test_load_update_weird():
     # for a difference in the past on any column, the entry
@@ -746,6 +745,7 @@ def test_load_update_weird():
     assert to_delete[0]['datestart'] == '2011:324:01:05:40.930'
     assert to_insert[0]['datestart'] == '2011:324:01:05:40.930'
 
+
 def test_load_update_truncate():
     # if an old entry is now truncated, it and all after should be replaced
     db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
@@ -757,6 +757,7 @@ def test_load_update_truncate():
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= want_loads[10]['datestart']])
     assert to_delete[0]['datestart'] == want_loads[10]['datestart']
     assert to_insert[0]['datestart'] == want_loads[10]['datestart']
+
 
 def test_load_update_sosa_truncate():
     # if an old entry is now truncated, it and all after should be replaced
@@ -770,7 +771,6 @@ def test_load_update_sosa_truncate():
     assert len(to_insert) == 11
     assert to_delete[0]['datestart'] == want_loads[12]['datestart']
     assert to_insert[0]['datestart'] == want_loads[12]['datestart']
-
 
 
 def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
@@ -847,7 +847,6 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
                 assert True
             else:
                 assert False
-        
     s.cleanup()
 
 
@@ -888,7 +887,6 @@ def test_sosa_scs107(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
 
 
     #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
 
     # a time for the interrupt (chosen in the middle of a segment)
     int_time = '2010:278:20:00:00.000'
@@ -957,7 +955,6 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
 
 
     #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
 
     # a time for the interrupt (chosen in the middle of a segment)
     int_time = '2010:278:20:00:00.000'
@@ -999,7 +996,7 @@ def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
     s.cleanup()
 
 def test_sosa_scs107_V2(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
-        
+
     err.write("Running sosa scs 107 v2 simulation \n" )
 
     s = Scenario(outdir)
