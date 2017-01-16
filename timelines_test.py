@@ -18,10 +18,13 @@ from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
 import tables
-import time
-
+import pytest
+from astropy.table import Table
+from kadi import events
+from Ska.astro import sph_dist
 #from Ska.Numpy import pprint
 
+from mica.archive import obspar
 import update_load_seg_db
 
 err = sys.stderr
@@ -313,11 +316,51 @@ class Scenario(object):
         bash(cmd)
 
         self.db_initialized = True
+
+
+    def consistent_with_data(self):
+        load_rdb = self.load_rdb
+        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+        check_datestart = self.first_npnt_state['datestop']
+        check_datestop = loads[-1]['TStop (GMT)']
+
+        db_states = Table(self.db_handle().fetchall(
+                'select * from cmd_states where datestart > "{}" and datestart  < "{}"'.format(
+                    check_datestart, check_datestop)))
+        # should probably group these
+        for obsid in np.unique(db_states['obsid']):
+
+            idxs = np.flatnonzero(db_states['obsid'] == obsid)
+            if (0 in idxs) or ((len(db_states) - 1) in idxs):
+                continue # skip the first one and the last one
+            start_obs = db_states[idxs][0]['datestart']
+            stop_obs = db_states[idxs][-1]['datestop']
+            k_obs = events.obsids.filter(obsid=obsid)[0]
+            assert abs(DateTime(k_obs.start).secs - DateTime(start_obs).secs) < 5
+            assert abs(DateTime(k_obs.stop).secs - DateTime(stop_obs).secs) < 5
+        for idx, state in enumerate(db_states):
+            if idx == 0:
+                continue
+            if state['pcad_mode'] == 'NPNT' and db_states[idx - 1]['pcad_mode'] != 'NPNT':
+                manvr = events.manvrs.filter(obsid=state['obsid'])[0]
+                assert sph_dist(manvr.stop_ra, manvr.stop_dec, state['ra'], state['dec']) < .5
+            if state['pcad_mode'] == 'NPNT' and state['clocking'] == 1 and state['obsid'] < 40000:
+                obsinfo = obspar.get_obspar(state['obsid'])
+                assert obsinfo['num_ccd_on'] == state['ccd_count']
+        err.write("Obsid times, CCD counts, Pointings consistent between kadi and states\n")
+        return True
+
+
         
     def check_hdf5_sql_consistent(self):
         """Check that all HDF5 string and int values match corresponding SQL
         values.
         """
+        load_rdb = self.load_rdb
+        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+        check_datestart = self.first_npnt_state['datestop']
+        check_datestop = loads[-1]['TStop (GMT)']
+
         h5 = tables.openFile(self.h5file, mode='r')
         db = self.db_handle()
         sql_rows = db.fetchall('select * from cmd_states')
@@ -326,8 +369,10 @@ class Scenario(object):
         colnames = ('datestart', 'datestop', 'obsid', 'power_cmd', 'si_mode', 'pcad_mode',
                     'vid_board', 'clocking', 'fep_count', 'ccd_count', 'trans_keys',
                     'hetg', 'letg', 'dither')
+        sql_ok = sql_rows['datestart'] >= check_datestart
+        h5_ok = h5_rows['datestart'] >= check_datestart
         for name in colnames:
-            match = np.all(sql_rows[name] == h5_rows[name])
+            match = np.all(sql_rows[sql_ok][name] == h5_rows[h5_ok][name])
             if not match:
                 err.write('FAILED MATCH for {}\n'.format(name))
                 err.write('SQL: {}\n'.format(sql_rows[name]))
@@ -547,10 +592,11 @@ def check_load(load_rdb, state_file, expect_match=True):
     # make new states from load segments
     s = make_states(load_rdb)
     text_files = s.output_text_files()
+    assert s.consistent_with_data()
+    assert s.check_hdf5_sql_consistent()
     for etype in ['states',]:
         match = text_compare(text_files[etype], state_file, s.outdir, etype)
         assert match
-    assert s.check_hdf5_sql_consistent()
     s.cleanup()
 
 
