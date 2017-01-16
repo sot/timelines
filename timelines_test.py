@@ -618,71 +618,28 @@ def make_states(load_rdb, dbi=DBI, outdir=None):
     return s
 
 
+# Beginning of actual tests
+
+scenarios = [
+    dict(loads='t/2008:048:08:07:00.000.rdb',
+         states='t/2008:048:08:07:00.000.dat'),
+    dict(loads='t/2010:023:15:15:00.000.rdb',
+         states='t/2010:023:15:15:00.000.dat'),
+    dict(loads='t/2009:164:04:11:15.022.rdb',
+         states='t/2009:164:04:11:15.022.dat'),
+    ]
 
 
-### actual tests.
-def test_loads():
+@pytest.mark.parametrize("ftest", scenarios)
+def test_loads(ftest):
     """
     Build testing states and test against fiducial data
 
     Return testing generators for each list of loads to be checked
     """
-
-    # load segment files and states to test against
-    good = [
-         dict(loads='t/2008:048:08:07:00.000.rdb',
-             states='t/2008:048:08:07:00.000.dat'),
-        dict(loads='t/2010:023:15:15:00.000.rdb',
-             states='t/2010:023:15:15:00.000.dat'),
-        dict(loads='t/2009:164:04:11:15.022.rdb',
-             states='t/2009:164:04:11:15.022.dat'),
-        dict(loads='t/2009:193:20:30:02.056.rdb',
-             states='t/2009:193:20:30:02.056.dat'),
-        dict(loads='t/2009:214:22:44:19.592.rdb',
-             states='t/2009:214:22:44:19.592.dat'),
-        dict(loads='t/july_fixed.rdb',
-             states='t/july_fixed.dat'),
-        dict(loads='t/2009:248:12:39:44.351.rdb',
-             states='t/2009:248:12:39:44.351.dat'),
-        dict(loads='t/2009:274:22:25:44.351.rdb',
-             states='t/2009:274:22:25:44.351.dat'),
-        dict(loads='t/cut_cl110_1409.rdb',
-             states='t/cut_cl110_1409.dat'),
-        dict(loads='t/cut_cl304_0504.rdb',
-             states='t/cut_cl304_0504.dat'),
-        dict(loads='t/cut_cl352_1208.rdb',
-             states='t/cut_cl352_1208.dat'),
-        ]
-
-
-    for ftest in good:
-        load_rdb = ftest['loads']
-        state_file = ftest['states']
-        err.write("Checking %s\n" % load_rdb )
-        f = partial( check_load, load_rdb, state_file, True)
-        f.description = "Confirm %s matches %s states" % (load_rdb, state_file)
-        yield(f,)
-
-
-
-    # *INCORRECT* fiducial states to check failure
-    #bad = [dict(loads='t/july_broken.rdb',
-    #            states='t/july_broken.dat')]
-    #
-    # I don't have a good way to make up broken states with hetg/letg
-    # columns handy, so disabling this test for timelines 0.05
-    bad = []
-
-    for ftest in bad:
-        load_rdb = ftest['loads']
-        state_file = ftest['states']
-        err.write("Checking %s\n" % load_rdb )
-        f = partial( check_loads, load_rdb, state_file, False)
-        f.description = "%s unexpectedly matches %s states" % (load_rdb, state_file)
-        yield(f,)
-
-
-
+    load_rdb = ftest['loads']
+    state_file = ftest['states']
+    check_load(load_rdb, state_file, True)
 
 
 def test_get_built_load():
