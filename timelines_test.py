@@ -423,33 +423,25 @@ class Scenario(object):
         # timelines timerange until we hit first NPNT state
         # and use the time just after that state as the start of update_cmd_states
         first_timeline = testdb.fetchone("select datestart from timelines")
-
+        last_timeline = testdb.fetchone("select datestop from timelines order by datestart desc")
 
         if self.first_npnt_state is None:
             acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca',
                                 numpy=True, verbose=verbose)
             es_query = """select * from cmd_states
-                          where datestop > '%s'
-                          order by datestart asc""" % first_timeline['datestart'] 
-            db_states = acadb.fetch(es_query)
-
-            from itertools import izip, count
-            for state, scount in izip(acadb.fetch(es_query), count()):
-                testdb.execute("delete from cmd_states where datestart = '%s'"
-                               % state['datestart'])
-                testdb.insert( state, 'cmd_states' )
-                if state['pcad_mode'] == 'NPNT':
+                          where datestop > '%s' and datestart < '%s'
+                          order by datestart asc""" % (first_timeline['datestart'], last_timeline['datestop'])
+            db_states = acadb.fetchall(es_query)
+            last_state = None
+            for idx, state in enumerate(db_states):
+                if state['pcad_mode'] != 'NPNT' and db_states[idx - 1]['pcad_mode'] == 'NPNT':
                     break
+                testdb.insert(state, 'cmd_states' )
+                last_state = state
 
-            err.write("Copied %d states from flight table from %s to %s \n" % (
-                scount + 1,
-                first_timeline['datestart'],
-                state['datestop']))
-
-            cmd_state_start = DateTime(state['datestop']).secs + 1
+            cmd_state_start = DateTime(last_state['datestop']).secs + .001
             cmd_state_datestart = DateTime(cmd_state_start).date
-
-            self.first_npnt_state = state
+            self.first_npnt_state = last_state
 
         else:
             # after the database has been set up the first time,
@@ -459,9 +451,8 @@ class Scenario(object):
                 raise ValueError("self.run_at_time must be defined")
             run_start = DateTime(self.run_at_time) - 10
             npnt_start = DateTime(self.first_npnt_state['datestop'])
-            cmd_state_start = max(npnt_start.secs, run_start.secs) + 1
+            cmd_state_start = max(npnt_start.secs, run_start.secs) + .001
             cmd_state_datestart = DateTime(cmd_state_start).date
-            print cmd_state_datestart
 
 
         #fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
@@ -471,8 +462,17 @@ class Scenario(object):
             nonload_cmd_file = os.path.join(os.environ['SKA'], 'share',
                                             'cmd_states', 'nonload_cmds_archive.py')
 
+        # insert nonload cmds
         err.write("%s %s \n" % (nonload_cmd_file, db_str))
         bash("%s %s " % (nonload_cmd_file, db_str ))
+
+        # Delete any cmds after region of interest
+        late_cmds = testdb.fetchall("select * from cmds where date > '{}'".format(
+                last_timeline['datestop']))
+        for cmd in late_cmds:
+            testdb.execute("delete from cmd_fltpars where cmd_id = {}".format(cmd['id']))
+            testdb.execute("delete from cmd_intpars where cmd_id = {}".format(cmd['id']))
+        testdb.execute("delete from cmds where date > '{}'".format(last_timeline['datestop']))
 
         update_cmd_states = os.path.join(os.environ['SKA'], 'share',
                                          'cmd_states', 'update_cmd_states.py')
