@@ -327,23 +327,31 @@ class Scenario(object):
         db_states = Table(self.db_handle().fetchall(
                 'select * from cmd_states where datestart > "{}" and datestart  < "{}"'.format(
                     check_datestart, check_datestop)))
-        # should probably group these
+        # Make tables of the kadi events that we check over the interval
+        # Start the maneuver search 2 days early so we get the maneuver *to* the first obsid
+        # that is checked
+        obsid_events = Table([{'start': o.start, 'stop': o.stop, 'obsid': o.get_obsid()}
+                              for o in events.obsids.filter(check_datestart, check_datestop)])
+        manvr_events = Table([{'start': o.start, 'obsid': o.get_obsid(),
+                               'dec': o.stop_dec, 'ra': o.stop_ra}
+                              for o in events.manvrs.filter(DateTime(check_datestart) - 2,
+                                                            check_datestop)])
         for obsid in np.unique(db_states['obsid']):
-
             idxs = np.flatnonzero(db_states['obsid'] == obsid)
             if (0 in idxs) or ((len(db_states) - 1) in idxs):
                 continue # skip the first one and the last one
+            kadi_obs = obsid_events[obsid_events['obsid'] == obsid][0]
             start_obs = db_states[idxs][0]['datestart']
             stop_obs = db_states[idxs][-1]['datestop']
-            k_obs = events.obsids.filter(obsid=obsid)[0]
-            assert abs(DateTime(k_obs.start).secs - DateTime(start_obs).secs) < 5
-            assert abs(DateTime(k_obs.stop).secs - DateTime(stop_obs).secs) < 5
+            assert abs(DateTime(kadi_obs['start']).secs - DateTime(start_obs).secs) < 5
+            assert abs(DateTime(kadi_obs['stop']).secs - DateTime(stop_obs).secs) < 5
         for idx, state in enumerate(db_states):
             if idx == 0:
                 continue
             if state['pcad_mode'] == 'NPNT' and db_states[idx - 1]['pcad_mode'] != 'NPNT':
-                manvr = events.manvrs.filter(obsid=state['obsid'])[0]
-                assert sph_dist(manvr.stop_ra, manvr.stop_dec, state['ra'], state['dec']) < .5
+                # hopefully the obsid was set correctly by the time of the NPNT transition
+                manvr = manvr_events[manvr_events['obsid'] == state['obsid']][0]
+                assert sph_dist(manvr['ra'], manvr['dec'], state['ra'], state['dec']) < .5
             if state['pcad_mode'] == 'NPNT' and state['clocking'] == 1 and state['obsid'] < 40000:
                 obsinfo = obspar.get_obspar(state['obsid'])
                 assert obsinfo['num_ccd_on'] == state['ccd_count']
@@ -351,7 +359,6 @@ class Scenario(object):
         return True
 
 
-        
     def check_hdf5_sql_consistent(self):
         """Check that all HDF5 string and int values match corresponding SQL
         values.
@@ -378,7 +385,6 @@ class Scenario(object):
                 err.write('SQL: {}\n'.format(sql_rows[name]))
                 err.write('HDF5: {}\n'.format(h5_rows[name]))
                 return False
-
         err.write('All HDF5 string and int values match corresponding SQL values\n')
         h5.close()
         return True
