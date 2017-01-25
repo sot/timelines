@@ -34,6 +34,9 @@ def get_options():
     parser.add_option("--cmd-states",
                       action="store_true",
                       help="Add cmd_states to output database")
+    parser.add_option("--tl-processing",
+                      action="store_true",
+                      help="Add full timelines pre-processing tables to output database")
     parser.add_option("--verbose",
                       action="store_true")
     parser.add_option('--wipe',
@@ -112,6 +115,10 @@ def main():
 
     datecols = ['datestart', 'datestart']
     tables = ['load_segments', 'timelines']
+
+    if opt.tl_processing:
+        tables.extend(['tl_obsids', 'tl_built_loads', 'tl_processing'])
+        datecols.extend([None, None, None])
 
     if opt.cmds:
         tables.extend(['cmds', 'cmd_fltpars', 'cmd_intpars'])
