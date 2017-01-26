@@ -1,9 +1,5 @@
-To make a fresh sqlite3 version of command states Sybase tables:
+To make a complete sqlite3 version of the tables from existing Sybase versions, do:
 
-$ ./make_new_tables.py --tstart=1999:001 --cmds --cmd-states # takes a few minutes
-
-To make a complete sqlite3 version to use for on-the-side sqlite3 crontasks, do:
-
-# ./make_new_tables.py --tstart=1999:001 --cmds --cmd-states --tl_processing # takes a few minutes
+$ ./make_new_tables.py --tstart=1999:001 --cmds --cmd-states --tl_processing # takes a few minutes
 $ cp db_base.db3 $SKA/data/cmd_states/cmd_states.db3  # as "aca" user
 
