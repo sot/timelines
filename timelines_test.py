@@ -18,10 +18,13 @@ from Chandra.Time import DateTime
 from functools import partial
 from shutil import copy
 import tables
-import time
-
+import pytest
+from astropy.table import Table
+from kadi import events
+from Ska.astro import sph_dist
 #from Ska.Numpy import pprint
 
+from mica.archive import obspar
 import update_load_seg_db
 
 err = sys.stderr
@@ -313,11 +316,58 @@ class Scenario(object):
         bash(cmd)
 
         self.db_initialized = True
-        
+
+
+    def consistent_with_data(self):
+        load_rdb = self.load_rdb
+        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+        check_datestart = self.first_npnt_state['datestop']
+        check_datestop = loads[-1]['TStop (GMT)']
+
+        db_states = Table(self.db_handle().fetchall(
+                'select * from cmd_states where datestart > "{}" and datestart  < "{}"'.format(
+                    check_datestart, check_datestop)))
+        # Make tables of the kadi events that we check over the interval
+        # Start the maneuver search 2 days early so we get the maneuver *to* the first obsid
+        # that is checked
+        obsid_events = Table([{'start': o.start, 'stop': o.stop, 'obsid': o.get_obsid()}
+                              for o in events.obsids.filter(check_datestart, check_datestop)])
+        manvr_events = Table([{'start': o.start, 'obsid': o.get_obsid(),
+                               'dec': o.stop_dec, 'ra': o.stop_ra}
+                              for o in events.manvrs.filter(DateTime(check_datestart) - 2,
+                                                            check_datestop)])
+        for obsid in np.unique(db_states['obsid']):
+            idxs = np.flatnonzero(db_states['obsid'] == obsid)
+            if (0 in idxs) or ((len(db_states) - 1) in idxs):
+                continue # skip the first one and the last one
+            kadi_obs = obsid_events[obsid_events['obsid'] == obsid][0]
+            start_obs = db_states[idxs][0]['datestart']
+            stop_obs = db_states[idxs][-1]['datestop']
+            assert abs(DateTime(kadi_obs['start']).secs - DateTime(start_obs).secs) < 5
+            assert abs(DateTime(kadi_obs['stop']).secs - DateTime(stop_obs).secs) < 5
+        for idx, state in enumerate(db_states):
+            if idx == 0:
+                continue
+            if state['pcad_mode'] == 'NPNT' and db_states[idx - 1]['pcad_mode'] != 'NPNT':
+                # hopefully the obsid was set correctly by the time of the NPNT transition
+                manvr = manvr_events[manvr_events['obsid'] == state['obsid']][0]
+                assert sph_dist(manvr['ra'], manvr['dec'], state['ra'], state['dec']) < .5
+            if state['pcad_mode'] == 'NPNT' and state['clocking'] == 1 and state['obsid'] < 40000:
+                obsinfo = obspar.get_obspar(state['obsid'])
+                assert obsinfo['num_ccd_on'] == state['ccd_count']
+        err.write("Obsid times, CCD counts, Pointings consistent between kadi and states\n")
+        return True
+
+
     def check_hdf5_sql_consistent(self):
         """Check that all HDF5 string and int values match corresponding SQL
         values.
         """
+        load_rdb = self.load_rdb
+        loads = Ska.Table.read_ascii_table(load_rdb, datastart=3)
+        check_datestart = self.first_npnt_state['datestop']
+        check_datestop = loads[-1]['TStop (GMT)']
+
         h5 = tables.openFile(self.h5file, mode='r')
         db = self.db_handle()
         sql_rows = db.fetchall('select * from cmd_states')
@@ -326,14 +376,15 @@ class Scenario(object):
         colnames = ('datestart', 'datestop', 'obsid', 'power_cmd', 'si_mode', 'pcad_mode',
                     'vid_board', 'clocking', 'fep_count', 'ccd_count', 'trans_keys',
                     'hetg', 'letg', 'dither')
+        sql_ok = sql_rows['datestart'] >= check_datestart
+        h5_ok = h5_rows['datestart'] >= check_datestart
         for name in colnames:
-            match = np.all(sql_rows[name] == h5_rows[name])
+            match = np.all(sql_rows[sql_ok][name] == h5_rows[h5_ok][name])
             if not match:
                 err.write('FAILED MATCH for {}\n'.format(name))
                 err.write('SQL: {}\n'.format(sql_rows[name]))
                 err.write('HDF5: {}\n'.format(h5_rows[name]))
                 return False
-
         err.write('All HDF5 string and int values match corresponding SQL values\n')
         h5.close()
         return True
@@ -378,33 +429,25 @@ class Scenario(object):
         # timelines timerange until we hit first NPNT state
         # and use the time just after that state as the start of update_cmd_states
         first_timeline = testdb.fetchone("select datestart from timelines")
-
+        last_timeline = testdb.fetchone("select datestop from timelines order by datestart desc")
 
         if self.first_npnt_state is None:
             acadb = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca',
                                 numpy=True, verbose=verbose)
             es_query = """select * from cmd_states
-                          where datestop > '%s'
-                          order by datestart asc""" % first_timeline['datestart'] 
-            db_states = acadb.fetch(es_query)
-
-            from itertools import izip, count
-            for state, scount in izip(acadb.fetch(es_query), count()):
-                testdb.execute("delete from cmd_states where datestart = '%s'"
-                               % state['datestart'])
-                testdb.insert( state, 'cmd_states' )
-                if state['pcad_mode'] == 'NPNT':
+                          where datestop > '%s' and datestart < '%s'
+                          order by datestart asc""" % (first_timeline['datestart'], last_timeline['datestop'])
+            db_states = acadb.fetchall(es_query)
+            last_state = None
+            for idx, state in enumerate(db_states):
+                if state['pcad_mode'] != 'NPNT' and db_states[idx - 1]['pcad_mode'] == 'NPNT':
                     break
+                testdb.insert(state, 'cmd_states' )
+                last_state = state
 
-            err.write("Copied %d states from flight table from %s to %s \n" % (
-                scount + 1,
-                first_timeline['datestart'],
-                state['datestop']))
-
-            cmd_state_start = DateTime(state['datestop']).secs + 1
+            cmd_state_start = DateTime(last_state['datestop']).secs + .001
             cmd_state_datestart = DateTime(cmd_state_start).date
-
-            self.first_npnt_state = state
+            self.first_npnt_state = last_state
 
         else:
             # after the database has been set up the first time,
@@ -414,9 +457,8 @@ class Scenario(object):
                 raise ValueError("self.run_at_time must be defined")
             run_start = DateTime(self.run_at_time) - 10
             npnt_start = DateTime(self.first_npnt_state['datestop'])
-            cmd_state_start = max(npnt_start.secs, run_start.secs) + 1
+            cmd_state_start = max(npnt_start.secs, run_start.secs) + .001
             cmd_state_datestart = DateTime(cmd_state_start).date
-            print cmd_state_datestart
 
 
         #fix_timelines = os.path.join(os.environ['SKA'], 'share', 'timelines', 'fix_timelines.py')
@@ -426,8 +468,17 @@ class Scenario(object):
             nonload_cmd_file = os.path.join(os.environ['SKA'], 'share',
                                             'cmd_states', 'nonload_cmds_archive.py')
 
+        # insert nonload cmds
         err.write("%s %s \n" % (nonload_cmd_file, db_str))
         bash("%s %s " % (nonload_cmd_file, db_str ))
+
+        # Delete any cmds after region of interest
+        late_cmds = testdb.fetchall("select * from cmds where date > '{}'".format(
+                last_timeline['datestop']))
+        for cmd in late_cmds:
+            testdb.execute("delete from cmd_fltpars where cmd_id = {}".format(cmd['id']))
+            testdb.execute("delete from cmd_intpars where cmd_id = {}".format(cmd['id']))
+        testdb.execute("delete from cmds where date > '{}'".format(last_timeline['datestop']))
 
         update_cmd_states = os.path.join(os.environ['SKA'], 'share',
                                          'cmd_states', 'update_cmd_states.py')
@@ -531,9 +582,6 @@ class Scenario(object):
         return self.text_files
 
 
-
-
-
 def check_load(load_rdb, state_file, expect_match=True):
     """
     Setup testing db for a list of load segments
@@ -547,10 +595,11 @@ def check_load(load_rdb, state_file, expect_match=True):
     # make new states from load segments
     s = make_states(load_rdb)
     text_files = s.output_text_files()
+    assert s.consistent_with_data()
+    assert s.check_hdf5_sql_consistent()
     for etype in ['states',]:
         match = text_compare(text_files[etype], state_file, s.outdir, etype)
         assert match
-    assert s.check_hdf5_sql_consistent()
     s.cleanup()
 
 
@@ -572,71 +621,28 @@ def make_states(load_rdb, dbi=DBI, outdir=None):
     return s
 
 
+# Beginning of actual tests
+
+scenarios = [
+    dict(loads='t/2008:048:08:07:00.000.rdb',
+         states='t/2008:048:08:07:00.000.dat'),
+    dict(loads='t/2010:023:15:15:00.000.rdb',
+         states='t/2010:023:15:15:00.000.dat'),
+    dict(loads='t/2009:164:04:11:15.022.rdb',
+         states='t/2009:164:04:11:15.022.dat'),
+    ]
 
 
-### actual tests.
-def test_loads():
+@pytest.mark.parametrize("ftest", scenarios)
+def test_loads(ftest):
     """
     Build testing states and test against fiducial data
 
     Return testing generators for each list of loads to be checked
     """
-
-    # load segment files and states to test against
-    good = [
-         dict(loads='t/2008:048:08:07:00.000.rdb',
-             states='t/2008:048:08:07:00.000.dat'),
-        dict(loads='t/2010:023:15:15:00.000.rdb',
-             states='t/2010:023:15:15:00.000.dat'),
-        dict(loads='t/2009:164:04:11:15.022.rdb',
-             states='t/2009:164:04:11:15.022.dat'),
-        dict(loads='t/2009:193:20:30:02.056.rdb',
-             states='t/2009:193:20:30:02.056.dat'),
-        dict(loads='t/2009:214:22:44:19.592.rdb',
-             states='t/2009:214:22:44:19.592.dat'),
-        dict(loads='t/july_fixed.rdb',
-             states='t/july_fixed.dat'),
-        dict(loads='t/2009:248:12:39:44.351.rdb',
-             states='t/2009:248:12:39:44.351.dat'),
-        dict(loads='t/2009:274:22:25:44.351.rdb',
-             states='t/2009:274:22:25:44.351.dat'),
-        dict(loads='t/cut_cl110_1409.rdb',
-             states='t/cut_cl110_1409.dat'),
-        dict(loads='t/cut_cl304_0504.rdb',
-             states='t/cut_cl304_0504.dat'),
-        dict(loads='t/cut_cl352_1208.rdb',
-             states='t/cut_cl352_1208.dat'),
-        ]
-
-
-    for ftest in good:
-        load_rdb = ftest['loads']
-        state_file = ftest['states']
-        err.write("Checking %s\n" % load_rdb )
-        f = partial( check_load, load_rdb, state_file, True)
-        f.description = "Confirm %s matches %s states" % (load_rdb, state_file)
-        yield(f,)
-
-
-
-    # *INCORRECT* fiducial states to check failure
-    #bad = [dict(loads='t/july_broken.rdb',
-    #            states='t/july_broken.dat')]
-    #
-    # I don't have a good way to make up broken states with hetg/letg
-    # columns handy, so disabling this test for timelines 0.05
-    bad = []
-
-    for ftest in bad:
-        load_rdb = ftest['loads']
-        state_file = ftest['states']
-        err.write("Checking %s\n" % load_rdb )
-        f = partial( check_loads, load_rdb, state_file, False)
-        f.description = "%s unexpectedly matches %s states" % (load_rdb, state_file)
-        yield(f,)
-
-
-
+    load_rdb = ftest['loads']
+    state_file = ftest['states']
+    check_load(load_rdb, state_file, True)
 
 
 def test_get_built_load():
@@ -667,7 +673,7 @@ def test_get_built_load():
 def test_get_processing():
 
     dbh = Ska.DBI.DBI(dbi='sybase', user='aca_read', database='aca', numpy=True, verbose=False)
- 
+
     good = [dict(built_load={'file': 'C044_2301.sum',
                                'first_cmd_time': '2010:052:01:59:26.450',
                                'last_cmd_time': '2010:052:12:20:06.101',
@@ -719,6 +725,7 @@ def test_weeks_for_load():
         err.write("Checking weeks_for_load \n" )
         assert new_timelines == update_load_seg_db.weeks_for_load( load, dbh)
 
+
 def test_first_sosa_update():
     # for a plain update, sosa or not, nothing should be deleted
     # and new entries should be inserted
@@ -729,6 +736,7 @@ def test_first_sosa_update():
     assert len(to_delete) == 0
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= '2011:335:13:44:41.368'])
     assert to_insert[0]['datestart'] == '2011:335:13:44:41.368'
+
 
 def test_load_update_weird():
     # for a difference in the past on any column, the entry
@@ -743,6 +751,7 @@ def test_load_update_weird():
     assert to_delete[0]['datestart'] == '2011:324:01:05:40.930'
     assert to_insert[0]['datestart'] == '2011:324:01:05:40.930'
 
+
 def test_load_update_truncate():
     # if an old entry is now truncated, it and all after should be replaced
     db_loads = asciitable.read('t/pre_sosa_db_loads.txt')
@@ -754,6 +763,7 @@ def test_load_update_truncate():
     assert len(to_insert) == len(want_loads[want_loads['datestart'] >= want_loads[10]['datestart']])
     assert to_delete[0]['datestart'] == want_loads[10]['datestart']
     assert to_insert[0]['datestart'] == want_loads[10]['datestart']
+
 
 def test_load_update_sosa_truncate():
     # if an old entry is now truncated, it and all after should be replaced
@@ -767,7 +777,6 @@ def test_load_update_sosa_truncate():
     assert len(to_insert) == 11
     assert to_delete[0]['datestart'] == want_loads[12]['datestart']
     assert to_insert[0]['datestart'] == want_loads[12]['datestart']
-
 
 
 def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
@@ -844,307 +853,8 @@ def test_nsm_2010(outdir='t/nsm_2010', cmd_state_ska=SKA):
                 assert True
             else:
                 assert False
-        
     s.cleanup()
 
-
-
-
-def test_sosa_scs107(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
-        
-    err.write("Running sosa scs 107 simulation \n" )
-
-    s = Scenario(outdir)
-    s.db_setup()
-    db_str = s.db_cmd_str()
-
-    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
-    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    load_dir = os.path.join(outdir, 'loads')
-    os.makedirs(load_dir)
-    shutil.copy('t/sosa.rdb', load_dir)
-    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
-    s.load_dir = os.path.join(outdir, 'loads')
-    s.mp_dir = os.path.join(outdir, 'mp') 
-
-    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
-    mp_dir = os.path.join(outdir, 'mp')
-    
-    prefix = 'sosa_pre_'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-
-    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
-
-    # a time for the interrupt (chosen in the middle of a segment)
-    int_time = '2010:278:20:00:00.000'
-
-    # run the interrupt commanding before running the rest of the commands
-    # if the current time is the first simulated cron pass after the
-    # actual insertion of the interrupt commands
-    #print "Performing SCS107 interrupt"
-    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set scs107 "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --observing-only "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(scs_cmd + "\n")
-    bash_shell(scs_cmd)
-
-
-    prefix = 'sosa_post_'
-    s.run_at_time = '2010:283:20:40:02.056'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-    s.cleanup()
-
-
-def test_sosa_nsm(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
-        
-    err.write("Running sosa nsm simulation \n" )
-
-    s = Scenario(outdir)
-    s.db_setup()
-    db_str = s.db_cmd_str()
-
-    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
-    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    load_dir = os.path.join(outdir, 'loads')
-    os.makedirs(load_dir)
-    shutil.copy('t/sosa.rdb', load_dir)
-    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
-    s.load_dir = os.path.join(outdir, 'loads')
-    s.mp_dir = os.path.join(outdir, 'mp') 
-
-    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
-    mp_dir = os.path.join(outdir, 'mp')
-    
-    prefix = 'sosa_nsmpre_'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-
-    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
-
-    # a time for the interrupt (chosen in the middle of a segment)
-    int_time = '2010:278:20:00:00.000'
-
-    # run the interrupt commanding before running the rest of the commands
-    # if the current time is the first simulated cron pass after the
-    # actual insertion of the interrupt commands
-    nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set nsm "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(nsm_cmd + "\n")
-    bash_shell(nsm_cmd)
-
-    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set scs107 "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(scs_cmd + "\n")
-    bash_shell(scs_cmd)
-
-
-    prefix = 'sosa_nsmpost_'
-    s.run_at_time = '2010:283:20:40:02.056'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-    s.cleanup()
-
-def test_sosa_scs107_V2(outdir='t/sosa_scs107', cmd_state_ska=os.environ['SKA']):
-        
-    err.write("Running sosa scs 107 v2 simulation \n" )
-
-    s = Scenario(outdir)
-    s.db_setup()
-    db_str = s.db_cmd_str()
-
-    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
-    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    load_dir = os.path.join(outdir, 'loads')
-    os.makedirs(load_dir)
-    shutil.copy('t/sosa.rdb', load_dir)
-    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
-    s.load_dir = os.path.join(outdir, 'loads')
-    s.mp_dir = os.path.join(outdir, 'mp') 
-
-    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
-    shutil.copy('t/sosa_v2_C276_0906.sum', 
-                os.path.join(outdir, 'mp/2010/OCT0410/oflsa/mps', 
-                             'C276_0906.sum'))
-    mp_dir = os.path.join(outdir, 'mp')
-    
-    prefix = 'sosa_pre_'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-
-    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
-
-    # a time for the interrupt (chosen in the middle of a segment)
-    int_time = '2010:278:20:00:00.000'
-
-    # run the interrupt commanding before running the rest of the commands
-    # if the current time is the first simulated cron pass after the
-    # actual insertion of the interrupt commands
-    #print "Performing SCS107 interrupt"
-    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set scs107 "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --observing-only "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(scs_cmd + "\n")
-    bash_shell(scs_cmd)
-
-
-    prefix = 'sosa_post_'
-    s.run_at_time = '2010:283:20:40:02.056'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-    s.cleanup()
-
-
-def test_sosa_nsm_v2(outdir='t/sosa_nsm', cmd_state_ska=os.environ['SKA']):
-        
-    err.write("Running sosa nsm v2 simulation \n" )
-
-    s = Scenario(outdir)
-    s.db_setup()
-    db_str = s.db_cmd_str()
-
-    # make a local copy of nonload_cmds_archive, (will be modified in test directory by interrupt)
-    shutil.copyfile('t/sosa_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    load_dir = os.path.join(outdir, 'loads')
-    os.makedirs(load_dir)
-    shutil.copy('t/sosa.rdb', load_dir)
-    s.load_rdb = os.path.join(load_dir, 'sosa.rdb')
-    s.load_dir = os.path.join(outdir, 'loads')
-    s.mp_dir = os.path.join(outdir, 'mp') 
-
-    shutil.copytree('t/sosa_mp', os.path.join(outdir, 'mp'))
-    shutil.copy('t/sosa_v2_C276_0906.sum', 
-                os.path.join(outdir, 'mp/2010/OCT0410/oflsa/mps', 
-                             'C276_0906.sum'))
-    mp_dir = os.path.join(outdir, 'mp')
-    
-    prefix = 'sosa_nsmpre_'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-
-    #shutil.copyfile( dbfilename, os.path.join(outdir, 'db_pre_interrupt.db3'))
-    
-
-    # a time for the interrupt (chosen in the middle of a segment)
-    int_time = '2010:278:20:00:00.000'
-
-    # run the interrupt commanding before running the rest of the commands
-    # if the current time is the first simulated cron pass after the
-    # actual insertion of the interrupt commands
-    nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set nsm "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(nsm_cmd + "\n")
-    bash_shell(nsm_cmd)
-
-    scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-               + " --cmd-set scs107 "
-               + " --date '%s'" % DateTime(int_time).date
-               + " --interrupt "
-               + " --archive-file %s/nonload_cmds_archive.py " % outdir
-               + db_str)
-    err.write(scs_cmd + "\n")
-    bash_shell(scs_cmd)
-
-
-    prefix = 'sosa_nsmpost_'
-    s.run_at_time = '2010:283:20:40:02.056'
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    text_files = s.output_text_files(prefix=prefix)
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-    s.cleanup()
 
 
 def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
@@ -1240,226 +950,7 @@ def test_sosa_transition(outdir='t/sosa_update', cmd_state_ska=SKA):
     s.cleanup()
 
 
-def test_reinsert(outdir='t/reinsert', cmd_state_ska=os.environ['SKA']):
-
-    # Fixing the database for the command collision bugs in March 2012
-    # revealed another bug whereby 2 timelines are not reinserted for 2 new
-    # load segments because there is already 1 matching timeline.
-    # Test added to prevent recurrence.
-
-    err.write("Running reinsert simulation \n")
-    s = Scenario(outdir)
-    s.db_setup()
-
-    # use a clone of the load_segments "time machine"
-    load_rdb = 't/2012:082:15:57:01.000.rdb'
-
-    # make a local copy of nonload_cmds_archive,
-    # which will be modified in test directory by interrupt
-    shutil.copyfile('t/nsm_nonload_cmds_archive.py',
-                    '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    s.load_rdb = load_rdb
-    s.run_at_time = '2012:082:15:57:01.000'
-    s.data_setup()
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    dbh = s.db_handle()
-    first_timelines = dbh.fetchall("select * from timelines")
-
-    load_segments = dbh.fetchall("select * from load_segments")
-    ls = load_segments[19]
-    mock_datestart = DateTime(DateTime(ls['datestart']).secs + 1).date
-    dbh.execute("update load_segments set datestart = '%s' where id = %d"
-                % (mock_datestart, ls['id']))
-    s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-    second_timelines = dbh.fetchall("select * from timelines")
-    # these should just all be the same
-    match_cols = ['dir', 'datestart', 'datestop']
-    for want_entry, have_entry in izip(first_timelines, second_timelines):
-        if any(have_entry[x] != want_entry[x] for x in match_cols):
-            assert False
 
 
 
-
-
-# 'test' isn't in the name to skip using this as a nosetest by default.
-# It just takes too long.
-def all_2010(outdir='t/all_2010', cmd_state_ska=SKA):
-
-    # Simulate timelines and cmd_states for all of 2010
-
-    err.write("Running all 2010 simulation \n" )
-
-    s = Scenario(outdir)
-    s.db_setup()
-    db_str = s.db_cmd_str()
-
-    # use a clone of the load_segments "time machine"
-    tm = 'iFOT_time_machine'
-    load_rdb = os.path.join(tm, 'load_segment.rdb')
-    
-    # make a local copy of nonload_cmds_archive, modified in test directory by interrupt
-    shutil.copyfile('t/nsm_nonload_cmds_archive.py', '%s/nonload_cmds_archive.py' % outdir)
-    bash_shell("chmod 755 %s/nonload_cmds_archive.py" % outdir)
-
-    # when to begin simulation
-    start_time = DateTime('2010:001:00:00:00.000')
-
-    # load interrupt time
-    int_time = DateTime('2010:150:04:00:00.000')
-    # days between simulated cron task to update timelines
-    step = 1
-
-    for day_step in np.arange( 0, 365, step):
-        ifot_time = start_time + day_step
-        time_machine_update(ifot_time)
-
-        # run the interrupt commanding before running the rest of the commands
-        # if the current time is the first simulated cron pass after the
-        # actual insertion of the interrupt commands
-        dtime = ifot_time - int_time.secs
-        if dtime / 3600. >= 0 and dtime / 3600. < 24:
-            err.write( "Performing interrupt \n")
-            nsm_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-                       + " --cmd-set nsm "
-                       + " --date '%s'" % DateTime(int_time).date
-                       + " --interrupt "
-                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
-                       + db_str)
-            err.write(nsm_cmd + "\n")
-            bash_shell(nsm_cmd)
-
-            scs_cmd = ("%s/share/cmd_states/add_nonload_cmds.py " % cmd_state_ska
-                       + " --cmd-set scs107 "
-                       + " --date '%s'" % DateTime(int_time).date
-                       + " --interrupt "
-                       + " --archive-file %s/nonload_cmds_archive.py " % outdir
-                       + db_str)
-            err.write(scs_cmd + "\n")
-            bash_shell(scs_cmd)
-        else:
-            # but do some extra work to skip running the whole process on days when
-            # there are no updates from the load segments table
-            if os.path.exists(os.path.join(outdir, 'last_loads.rdb')):
-                last_rdb_lines = open(os.path.join(outdir, 'last_loads.rdb')).readlines()
-                new_rdb_lines = open(load_rdb).readlines()
-                differ = difflib.context_diff(last_rdb_lines, new_rdb_lines)
-                # cheat and just get lines that begin with + or !
-                # (new or changed)
-                change_test = re.compile('^(\+|\!)\s.*')
-                difflines = filter(change_test.match, [line for line in differ])
-                if len(difflines) == 0:
-                    err.write("Skipping %s, no additions\n" % ifot_time)
-                    continue
-                else:
-                    for line in difflines:
-                        err.write("%s" % line)
-
-        err.write("Processing %s\n" % ifot_time)
-
-        # and copy that load_segment file to testing/working directory
-        shutil.copyfile(load_rdb, '%s/%s_loads.rdb' % (outdir, DateTime(ifot_time).date))
-
-        # and copy that load_segment file to the 'last' file
-        shutil.copyfile(load_rdb, '%s/last_loads.rdb' % (outdir))
-
-        s.load_rdb = load_rdb
-        s.data_setup()
-
-
-        prefix = DateTime(ifot_time).date + '_'
-        # run the rest of the cron task pieces: parse_cmd_load_gen.pl,
-        # update_load_seg_db.py, update_cmd_states.py
-
-        s.run_at_time = ifot_time
-        s.populate_states(nonload_cmd_file="%s/nonload_cmds_archive.py" % outdir)
-
-
-    # write out everything in the the timelines and states..
-    # doesn't use output_text_files, because I don't want the
-    # date ranges from the last rdb, I just want everything
-
-    dbh = s.db_handle()
-    prefix='all_'
-
-    text_files = s.output_text_files(prefix=prefix, get_all=True)
-
-    for etype in ['states','timelines']:
-        fidfile = os.path.join('t', "%sfid_%s.dat" % (prefix, etype))
-        match = text_compare(text_files[etype], fidfile, s.outdir, etype)
-        if match:
-            assert True
-        else:
-            assert False
-
-    s.cleanup()
-
-
-
-
-
-
-def run_model(opt, db):
-    """
-    Run the psmc twodof model for given states 
-
-    :param opt: cmd line options opt.load_rdb, opt.verbose, opt.outdir
-    :rtype: dict of just about everything
-    """
-
-    import Ska.Table
-
-    loads = Ska.Table.read_ascii_table(opt.load_rdb, datastart=3)
-    datestart = loads[0]['TStart (GMT)']
-    datestop = loads[-1]['TStop (GMT)']
-
-
-    # Add psmc dirs
-    psmc_dir = os.path.join(os.environ['SKA'], 'share', 'psmc')
-    sys.path.append(psmc_dir)
-    import Chandra.cmd_states as cmd_states
-    import Ska.TelemArchive.fetch
-    import numpy as np
-    states = db.fetchall("""select * from cmd_states
-                            where datestart >= '%s'
-                            and datestart <= '%s'
-                            order by datestart""" % (datestart, datestop ))
-    colspecs = ['1pdeaat', '1pin1at',
-                'tscpos', 'aosares1',
-                '1de28avo', '1deicacu',
-                '1dp28avo', '1dpicacu',
-                '1dp28bvo', '1dpicbcu']
-
-    print "Fetching from %s to %s" % ( states[0]['datestart'], states[-2]['datestart'])
-    colnames, vals = Ska.TelemArchive.fetch.fetch( start=states[0]['datestart'],
-                                                   stop=states[-2]['datestart'],
-                                                   dt=32.8,
-                                                   colspecs=colspecs )
-
-    tlm = np.rec.fromrecords( vals, names=colnames )
-    import psmc_check
-    plots_validation = psmc_check.make_validation_plots( opt, tlm, db )
-    valid_viols = psmc_check.make_validation_viols(plots_validation)
-    import characteristics
-    MSID = dict(dea='1PDEAAT', pin='1PIN1AT')
-    YELLOW = dict(dea=characteristics.T_dea_yellow, pin=characteristics.T_pin_yellow)
-    MARGIN = dict(dea=characteristics.T_dea_margin, pin=characteristics.T_pin_margin)
-    proc = dict(run_user=os.environ['USER'],
-                run_time=time.ctime(),
-                errors=[],
-                dea_limit=YELLOW['dea'] - MARGIN['dea'],
-                pin_limit=YELLOW['pin'] - MARGIN['pin'],
-                )
-
-    pred = dict(plots=None, viols=None, times=None, states=None, temps=None)  
-    psmc_check.write_index_rst(opt, proc, plots_validation, valid_viols=valid_viols, 
-                               plots=pred['plots'], viols=pred['viols'])
-    psmc_check.rst_to_html(opt, proc)
-    
-    return dict(opt=opt, states=pred['states'], times=pred['times'],
-                temps=pred['temps'], plots=pred['plots'],
-                viols=pred['viols'], proc=proc, 
-                plots_validation=plots_validation)
 
