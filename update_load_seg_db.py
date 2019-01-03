@@ -114,11 +114,12 @@ def get_replan_dir( replan_seg, replan_year, dbh=None):
     if match_like is None:
         raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
                          replan_seg)
-    replan_query = ("""select dir from tl_processing
+    replan_query = ("""select * from tl_processing
                        where file like 'C%s%s%s.sum'
-                       and year = %d 
+                       and year = %d or (year = %d and sumfile_modtime > %f)
                        order by year, sumfile_modtime desc
-                       """ % (match_like.group(1), '%', match_like.group(2), replan_year ))
+                       """ % (match_like.group(1), '%', match_like.group(2),
+                              replan_year, int(replan_year) - 1, DateTime(-21).unix))
     replan = dbh.fetchone( replan_query )
     # if a replan directory *still* hasn't been found
     if replan  is None:
