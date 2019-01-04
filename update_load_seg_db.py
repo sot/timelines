@@ -114,6 +114,13 @@ def get_replan_dir( replan_seg, replan_year, dbh=None):
     if match_like is None:
         raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
                          replan_seg)
+    # This query is intended to return the entry from the table of parsed/processed command
+    # load processing summaries that corresponds to the segment referenced as the piece
+    # being replanned from the current processing summary "replan_seg".  "replan_year" is supplied
+    # as the year of the current processing summary, but, in case of replan across a year
+    # boundary, logic is added to also allow files to be considered a match if from the
+    # previous year and modified during the last 21 days.
+    # The most recent file that matches the query will be used as the reference.
     replan_query = ("""select * from tl_processing
                        where file like 'C%s%s%s.sum'
                        and year = %d or (year = %d and sumfile_modtime > %f)
