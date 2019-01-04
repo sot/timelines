@@ -114,13 +114,15 @@ def get_replan_dir( replan_seg, replan_year, dbh=None):
     if match_like is None:
         raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
                          replan_seg)
-    # This query is intended to return the entry from the table of parsed/processed command
-    # load processing summaries that corresponds to the segment referenced as the piece
-    # being replanned from the current processing summary "replan_seg".  "replan_year" is supplied
-    # as the year of the current processing summary, but, in case of replan across a year
-    # boundary, logic is added to also allow files to be considered a match if from the
-    # previous year and modified during the last 21 days.
-    # The most recent file that matches the query will be used as the reference.
+    # get_replan_dirs is called on a text string from the command load generation processing
+    # summary that was the "replan source" and then this is trying to match up that source to
+    # a directory using the string/file name. Unfortunately, the file names are not guaranteed
+    # to be unique across calendar years, so this routine had code to limit to just the year
+    # of the replan (and that's why the files are also in a table that has year). I can't see
+    # any harm in using either the year of the replan or "last year" if the "last year" file
+    # was also created/modified within 21 days. This still is all hoping that the file names
+    # are at least unique within the year.
+    # The most recent file that matches the query will be used.
     replan_query = ("""select * from tl_processing
                        where file like 'C%s%s%s.sum'
                        and year = %d or (year = %d and sumfile_modtime > %f)
