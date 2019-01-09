@@ -101,13 +101,13 @@ def get_processing( built, dbh=None ):
         raise ValueError("Unable to find processing for built file %s", built['file'])
     return processed
 
-def get_replan_dir( replan_seg, replan_year, dbh=None):
+def get_replan_dir(replan_seg, run_datestart, dbh=None):
     """
-    Given the 'replan_cmds' entry from a processing summary (and the year) find
+    Given the 'replan_cmds' entry from a processing summary find
     the source file that most closely matches it.
 
     :param replan_seg: replan commands source string (like C123:1029 or C014_0293)
-    :param replan_year: year, integer
+    :param run_datestart: datestart of the new/replanned load
     :rtype: directory name string
     """
     match_like = re.search('C(\d{3}).?(\d{4})', replan_seg)
@@ -117,22 +117,19 @@ def get_replan_dir( replan_seg, replan_year, dbh=None):
     # get_replan_dirs is called on a text string from the command load generation processing
     # summary that was the "replan source" and then this is trying to match up that source to
     # a directory using the string/file name. Unfortunately, the file names are not guaranteed
-    # to be unique across calendar years, so this routine had code to limit to just the year
-    # of the replan (and that's why the files are also in a table that has year). I can't see
-    # any harm in using either the year of the replan or "last year" if the "last year" file
-    # was also created/modified within 21 days. This still is all hoping that the file names
-    # are at least unique within the year.
-    # The most recent file that matches the query will be used.
+    # to be unique across calendar years, so this routine has code to limit to just those files
+    # that have start times within 30 days of the new/replanned load.
+    # Note that processing_tstart is really a Chandra.Time.date format in the database.
     replan_query = ("""select * from tl_processing
                        where file like 'C%s%s%s.sum'
-                       and year = %d or (year = %d and sumfile_modtime > %f)
-                       order by year, sumfile_modtime desc
+                       and processing_tstart > "%s"
+                       order by year, processing_tstop desc
                        """ % (match_like.group(1), '%', match_like.group(2),
-                              replan_year, int(replan_year) - 1, DateTime(-21).unix))
-    replan = dbh.fetchone( replan_query )
+                              (DateTime(run_datestart) - 30).date))
+    replan = dbh.fetchone(replan_query)
     # if a replan directory *still* hasn't been found
-    if replan  is None:
-        raise ValueError("Unable to find file for %s,%s" % (replan_year, replan_seg))
+    if replan is None:
+        raise ValueError("Unable to find file for %s" % (replan_seg))
     return replan['dir']
 
 
@@ -204,7 +201,7 @@ def weeks_for_load( run_load, dbh=None, test=False ):
         # if processing covers the end but not the beginning (this one was interruped)
         if (run_load['datestart'] < processed['processing_tstart']
             and run_load['datestop'] <= processed['processing_tstop']):
-            replan_dir = get_replan_dir( processed['replan_cmds'], run_load['year'], dbh=dbh )
+            replan_dir = get_replan_dir(processed['replan_cmds'], run_load['datestart'], dbh=dbh )
             log.info("TIMELINES INFO: %s,%s is replan/reopen, using %s dir for imported cmds" % (
                 run_load['year'], run_load['load_segment'], replan_dir ))
             # the end
