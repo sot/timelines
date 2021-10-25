@@ -7,7 +7,7 @@ import re
 import logging
 from logging.handlers import SMTPHandler
 import numpy as np
-from itertools import count, izip
+from itertools import count
 
 import Ska.Table
 from Ska.DBI import DBI
@@ -225,9 +225,9 @@ def get_ref_timelines( datestart, dbh=None, n=10):
     pre_query =  ("select * from timelines where datestart <= '%s' order by datestart desc"
                   %  datestart )
     pre_query_fetch = dbh.fetch(pre_query)
-    for cnt in xrange(0,n):
+    for cnt in range(0,n):
         try:
-            ref_timelines.append( pre_query_fetch.next() )
+            ref_timelines.append( next(pre_query_fetch) )
         except StopIteration:
             if (cnt == 0):
                 log.warn("""TIMELINES WARN: no timelines found before current insert""")
@@ -469,7 +469,7 @@ def find_load_seg_changes(wants, haves, exclude=[]):
     # haves (the usual append condition) it gets set to the index of
     # the first new entry in wants.
     i_diff = 0
-    for want_entry, have_entry in izip(wants, haves):
+    for want_entry, have_entry in zip(wants, haves):
         # does the db load match?
         if (any(have_entry[x] != want_entry[x] for x in match_cols) ):
             log.info('LOAD_SEG INFO: Mismatch on these entries:')
