@@ -57,29 +57,17 @@ if ($opt{verbose}){
     print "Updating clgps tables with files newer than ", $opt{touch_file}, "\n";
 }
 
-if (-e $opt{touch_file}){    
+if (-e $opt{touch_file}){
     $touch_stat = stat($opt{touch_file});
 }
 
 
-my $load_arg;
-if ($opt{dbi} eq 'sybase'){
-    my $user = defined $opt{user} ? $opt{user}
-              :      $opt{dryrun} ? 'aca_read' 
-                                  : 'aca_ops';
-    my $database = defined $opt{database}      ? $opt{database} 
-                 : defined $ENV{SKA_DATABASE}  ? $ENV{SKA_DATABASE}
-                                               : 'aca';
-    $load_arg = sprintf("%s-%s-%s", 'sybase', $database, $user);
-}
-else{
-    $load_arg = { database  => $opt{server},
+my $load_arg = { database  => $opt{server},
                      type => 'array',
-                     raise_error => 1,  
-                     print_error => 1,  
-                     DBI_module => 'dbi:SQLite', 
+                     raise_error => 1,
+                     print_error => 1,
+                     DBI_module => 'dbi:SQLite',
                 };
-}
 
 my $load_handle = sql_connect($load_arg);
 
@@ -111,7 +99,7 @@ for ( my $year = 1999; $year <= $curr_year; $year++){
 	if ($max_touch_time < $mtime){
 	    $max_touch_time = $mtime;
 	    $max_touch_file = $file;
-	}    
+	}
     }
 }
 
@@ -133,9 +121,9 @@ sub update_for_file{
     my $file = shift;
 
     print "Parsing $file" if $opt{verbose};
-	
+
     my $file_stat = stat("$file");
-	
+
     my ( $week, $loads ) = parse_clgps( $file );
     my ( $dir, $filename);
     if ($file =~ /${mp_dir}(\/\d{4}\/\w{3}\d{4}\/ofls\w?\/)mps\/(C.*\.sum)/){
@@ -152,23 +140,23 @@ sub update_for_file{
     if (defined $dir and defined $filename){
 	$week->{dir} = $dir;
 	$week->{file} = $filename;
-	$week->{sumfile_modtime} = $file_stat->mtime; 
+	$week->{sumfile_modtime} = $file_stat->mtime;
 	for my $load_ref (@{$loads}){
 	    $load_ref->{file} = $filename;
 	    $load_ref->{sumfile_modtime} = $week->{sumfile_modtime};
-	    my $delete = qq( delete from tl_built_loads where year = $load_ref->{year} 
-			     and load_segment = "$load_ref->{load_segment}" 
+	    my $delete = qq( delete from tl_built_loads where year = $load_ref->{year}
+			     and load_segment = "$load_ref->{load_segment}"
 			     and file = "$filename"
                              and load_scs = $load_ref->{load_scs}
 			     and sumfile_modtime = $week->{sumfile_modtime} );
 	    sql_do( $load_handle, $delete);
 	    sql_insert_hash( $load_handle, 'tl_built_loads', $load_ref );
 	}
-	
+
 	# only bother to store if it has loads
 	sql_do( $load_handle, qq( delete from tl_processing where dir = "$dir" and file = "$filename"));
 	sql_insert_hash( $load_handle, 'tl_processing', $week );
-	
+
 	my $obsids = get_obsids("${mp_dir}/${dir}", $loads);
 	for my $obs_load (keys %{$obsids}){
 	    for my $obs_entry (@{$obsids->{$obs_load}}){
@@ -179,7 +167,7 @@ sub update_for_file{
 				load_segment => $ids[1],
 				obsid => $obs_entry->{obsid},
 				date => $obs_entry->{date},
-				); 
+				);
 		my $obs_delete = qq( delete from tl_obsids where dir = "$dir"
 				     and year = $ids[0]
 				     and load_segment = "$ids[1]"
@@ -190,7 +178,7 @@ sub update_for_file{
 	    }
 	}
     }
-    
+
     print " ... Done \n" if $opt{verbose};
     return $file_stat->mtime;
 
@@ -205,7 +193,7 @@ sub update_for_file{
 sub get_obsids{
     my $dir = shift;
     my $loads = shift;
-    
+
     my @bs_list = glob("${dir}/*.backstop");
     my $backstop = $bs_list[0];
 
@@ -235,7 +223,7 @@ sub parse_clgps {
 
     # assume this isn't a replan
     my %week = ( replan => 0 );
-		 
+
     my @rawloads;
     my $lines = io($gps)->slurp;
 
