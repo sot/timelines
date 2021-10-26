@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 
 import os
-import sys
 import glob
 import re
 import logging
-from logging.handlers import SMTPHandler
 import numpy as np
-from itertools import count
 
-import Ska.Table
+from astropy.table import Table
 from Ska.DBI import DBI
 from Chandra.Time import DateTime
-
-import fix_tl_processing
-import fix_load_segments
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
@@ -46,15 +40,15 @@ def get_options():
                       default=True,
                       help='Enable tracebacks')
     parser.add_option("--loadseg_rdb_dir",
-                      default=os.path.join(os.environ['SKA'], 'data', 'arc', 'iFOT_events', 'load_segment'),
+                      default=os.path.join(os.environ['SKA'], 'data',
+                                           'arc', 'iFOT_events', 'load_segment'),
                       help="directory containing iFOT rdb files of load segments")
 
     (opt, args) = parser.parse_args()
     return opt, args
 
 
-
-def get_built_load( run_load, dbh=None):
+def get_built_load(run_load, dbh=None):
     """
     Given an entry from the load_segments table, return the matching entry
     from the tl_built_loads table
@@ -63,27 +57,28 @@ def get_built_load( run_load, dbh=None):
 
     """
 
-    built_query = ( """select * from tl_built_loads where load_segment = '%s'
+    built_query = ("""select * from tl_built_loads where load_segment = '%s'
                        and year = %d order by sumfile_modtime desc"""
-                    % ( run_load['load_segment'], run_load['year'] ))
-    built = dbh.fetchone( built_query )
+                   % (run_load['load_segment'], run_load['year']))
+    built = dbh.fetchone(built_query)
     if built is None:
-        match_like = re.search('(CL\d{3}:\d{4})', run_load['load_segment'])
+        match_like = re.search(r'(CL\d{3}:\d{4})', run_load['load_segment'])
         if match_like is None:
             raise ValueError("Load name %s is in unknown form, expects /CL\d{3}:\d{4}/" %
                              run_load['load_segment'])
         like_load = match_like.group(1)
-        built_query = ( """select * from tl_built_loads where load_segment like '%s%s%s'
+        built_query = ("""select * from tl_built_loads where load_segment like '%s%s%s'
                            and year = %d order by sumfile_modtime desc"""
-                        % ( '%', like_load, '%',run_load['year'] ))
-        built = dbh.fetchone( built_query )
+                       % ('%', like_load, '%', run_load['year']))
+        built = dbh.fetchone(built_query)
         # if a built version *still* hasn't been found
-        if built  is None:
-            raise ValueError("Unable to find file for %s,%s" % (run_load['year'], run_load['load_segment']))
+        if built is None:
+            raise ValueError("Unable to find file for %s,%s" %
+                             (run_load['year'], run_load['load_segment']))
     return built
 
 
-def get_processing( built, dbh=None ):
+def get_processing(built, dbh=None):
     """
     Given an entry from the tl_built_loads table, return the entry for the
     corresponding file from tl_processing
@@ -92,11 +87,12 @@ def get_processing( built, dbh=None ):
     """
     processing_query = ("""select * from tl_processing where file = '%s'
                            and sumfile_modtime = %s order by dir desc """
-                        % ( built['file'], built['sumfile_modtime'] ))
-    processed = dbh.fetchone( processing_query )
+                        % (built['file'], built['sumfile_modtime']))
+    processed = dbh.fetchone(processing_query)
     if processed is None:
         raise ValueError("Unable to find processing for built file %s", built['file'])
     return processed
+
 
 def get_replan_dir(replan_seg, run_datestart, dbh=None):
     """
@@ -130,7 +126,7 @@ def get_replan_dir(replan_seg, run_datestart, dbh=None):
     return replan['dir']
 
 
-def weeks_for_load( run_load, dbh=None, test=False ):
+def weeks_for_load(run_load, dbh=None, test=False):
     """
     Determine the timeline intervals that exist for a load segment
 
@@ -176,43 +172,44 @@ def weeks_for_load( run_load, dbh=None, test=False ):
 
 
     """
-    built = get_built_load( run_load, dbh=dbh )
-    processed = get_processing( built, dbh=dbh )
+    built = get_built_load(run_load, dbh=dbh)
+    processed = get_processing(built, dbh=dbh)
 
     match_load_pieces = []
 
-    match = { 'dir' : processed['dir'],
-              'load_segment_id' : run_load['id'],
-              'datestart': run_load['datestart'],
-              'datestop': run_load['datestop'],
-              'replan': processed['replan'],
-              'incomplete': 1 }
+    match = {'dir': processed['dir'],
+             'load_segment_id': run_load['id'],
+             'datestart': run_load['datestart'],
+             'datestop': run_load['datestop'],
+             'replan': processed['replan'],
+             'incomplete': 1}
 
     if processed['replan'] and processed['bcf_cmd_count'] > 0:
         if processed['replan_cmds'] is None:
-            raise ValueError("Replan/ReOpen load: %s without replan_cmd source load! " % (run_load['load_segment']))
+            raise ValueError("Replan/ReOpen load: %s without replan_cmd source load! " %
+                             (run_load['load_segment']))
         # if load is completely contained in processing (earlier load interrupted in week )
-        if  (( run_load['datestart']  >=  processed['processing_tstart'] )
-             & (  run_load['datestop'] <=  processed['processing_tstop'] )):
-            match_load_pieces.append( match.copy() )
+        if ((run_load['datestart'] >= processed['processing_tstart'])
+                & (run_load['datestop'] <= processed['processing_tstop'])):
+            match_load_pieces.append(match.copy())
         # if processing covers the end but not the beginning (this one was interruped)
         if (run_load['datestart'] < processed['processing_tstart']
-            and run_load['datestop'] <= processed['processing_tstop']):
-            replan_dir = get_replan_dir(processed['replan_cmds'], run_load['datestart'], dbh=dbh )
+                and run_load['datestop'] <= processed['processing_tstop']):
+            replan_dir = get_replan_dir(processed['replan_cmds'], run_load['datestart'], dbh=dbh)
             log.info("TIMELINES INFO: %s,%s is replan/reopen, using %s dir for imported cmds" % (
-                run_load['year'], run_load['load_segment'], replan_dir ))
+                run_load['year'], run_load['load_segment'], replan_dir))
             # the end
             match['datestart'] = processed['processing_tstart']
-            match_load_pieces.append( match.copy() )
+            match_load_pieces.append(match.copy())
             # the pre-this-processed-file chunk
             match['datestart'] = run_load['datestart']
             match['datestop'] = processed['processing_tstart']
             match['dir'] = replan_dir
-            match_load_pieces.append( match.copy() )
+            match_load_pieces.append(match.copy())
     else:
         # if the run load matches the times of the built load
-        if ( (DateTime(run_load['datestart']).secs >= ( DateTime(built['first_cmd_time']).secs))
-             & (DateTime(run_load['datestop']).secs <= ( DateTime(built['last_cmd_time']).secs))):
+        if ((DateTime(run_load['datestart']).secs >= (DateTime(built['first_cmd_time']).secs))
+                & (DateTime(run_load['datestop']).secs <= (DateTime(built['last_cmd_time']).secs))):
             match['incomplete'] = 0
         # append even if incomplete
         match_load_pieces.append(match.copy())
@@ -220,26 +217,27 @@ def weeks_for_load( run_load, dbh=None, test=False ):
     timelines = sorted(match_load_pieces, key=lambda k: (k['datestart'], k['load_segment_id']))
     return timelines
 
-def get_ref_timelines( datestart, dbh=None, n=10):
+
+def get_ref_timelines(datestart, dbh=None, n=10):
     ref_timelines = []
-    pre_query =  ("select * from timelines where datestart <= '%s' order by datestart desc"
-                  %  datestart )
+    pre_query = ("select * from timelines where datestart <= '%s' order by datestart desc"
+                 % datestart)
     pre_query_fetch = dbh.fetch(pre_query)
-    for cnt in range(0,n):
+    for cnt in range(0, n):
         try:
-            ref_timelines.append( next(pre_query_fetch) )
+            ref_timelines.append(next(pre_query_fetch))
         except StopIteration:
             if (cnt == 0):
                 log.warn("""TIMELINES WARN: no timelines found before current insert""")
             else:
                 log.warn("""TIMELINES WARN: only found %i of %i timelines before current insert"""
-                         % (cnt-1, 10))
+                         % (cnt - 1, 10))
             break
     ref_timelines = sorted(ref_timelines, key=lambda k: k['datestart'])
     return ref_timelines
 
 
-def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
+def update_timelines_db(loads, dbh, max_id, dryrun=False, test=False):
     """
     Given a list of load segments this routine determines the timelines (mission
     planning weeks and loads etc) over the loads and inserts new timelines
@@ -263,15 +261,15 @@ def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
     as_run = sorted(as_run, key=lambda k: k['datestart'])
 
     log.info("TIMELINES INFO: Updating timelines for range %s to %s"
-             % ( as_run[0]['datestart'], as_run[-1]['datestop']))
+             % (as_run[0]['datestart'], as_run[-1]['datestop']))
 
     timelines = []
     for run_load in as_run:
-        run_timelines = weeks_for_load( run_load,
-                                        dbh=dbh,
-                                        test=test)
+        run_timelines = weeks_for_load(run_load,
+                                       dbh=dbh,
+                                       test=test)
         if len(run_timelines) == 0:
-            raise ValueError("No timelines found for load %s" % run_load )
+            raise ValueError("No timelines found for load %s" % run_load)
         for run_timeline in run_timelines:
             # append the new timeline to the list to insert
             timelines.append(run_timeline)
@@ -281,7 +279,7 @@ def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
     db_timelines = dbh.fetchall("""select * from timelines
                                    where datestop >= '%s'
                                    order by datestart, load_segment_id
-                                   """ % ( timelines[0]['datestart']))
+                                   """ % (timelines[0]['datestart']))
 
     if len(db_timelines) > 0:
         i_diff = 0
@@ -308,36 +306,38 @@ def update_timelines_db( loads, dbh, max_id, dryrun=False, test=False):
 
     # warn if timeline is shorter than an hour
     for run_timeline in timelines[i_diff:]:
-        time_length = DateTime(run_timeline['datestop']).secs - DateTime(run_timeline['datestart']).secs
+        time_length = DateTime(run_timeline['datestop']).secs - \
+            DateTime(run_timeline['datestart']).secs
         if time_length / 60. < 60:
-            log.warn("TIMELINES WARN: short timeline at %s, %d minutes" % ( run_timeline['datestart'],
-                                                                            time_length / 60. ))
+            log.warn("TIMELINES WARN: short timeline at %s, %d minutes" % (run_timeline['datestart'],
+                                                                           time_length / 60.))
     # find all db timelines that start after the last valid one [i_diff-1]
     findcmd = ("""SELECT id from timelines
                   WHERE datestart > '%s'
                   AND fixed_by_hand = 0
                   AND datestart <= datestop """
-               % timelines[i_diff-1]['datestart'] )
-    defunct_tl = dbh.fetchall( findcmd )
+               % timelines[i_diff - 1]['datestart'])
+    defunct_tl = dbh.fetchall(findcmd)
     if len(defunct_tl):
         for id in defunct_tl.id:
-            clear_timeline( id, dbh=dbh, dryrun=dryrun )
+            clear_timeline(id, dbh=dbh, dryrun=dryrun)
 
     # Insert new timelines[i_diff:]
     log.info('TIMELINES INFO: inserting timelines[%d:%d] to timelines' %
-                  (i_diff, len(timelines)+1))
+             (i_diff, len(timelines) + 1))
     for t_count, timeline in enumerate(timelines[i_diff:]):
         log.debug('TIMELINES DEBUG: inserting timeline:')
-        insert_string = "\t %s %s %s" % ( timeline['dir'],
-                                             timeline['datestart'], timeline['datestop'],
-                                             )
+        insert_string = "\t %s %s %s" % (timeline['dir'],
+                                         timeline['datestart'], timeline['datestop'],
+                                         )
         log.debug(insert_string)
         timeline['id'] = max_id + 1 + t_count
         timeline['fixed_by_hand'] = 0
         if not dryrun:
             dbh.insert(timeline, 'timelines')
 
-def rdb_to_db_schema( orig_ifot_loads ):
+
+def rdb_to_db_schema(orig_ifot_loads):
     """
     Convert the load segment data from a get_iFOT_events.pl rdb table into
     the schema used by the load segments table
@@ -349,21 +349,21 @@ def rdb_to_db_schema( orig_ifot_loads ):
     for orig_load in orig_ifot_loads:
         starttime = DateTime(orig_load['TStart (GMT)'])
         load = (
-                 orig_load['LOADSEG.NAME'],
-                 int(starttime.frac_year),
-                 orig_load['TStart (GMT)'],
-                 orig_load['TStop (GMT)'],
-                 orig_load['LOADSEG.SCS'],
-                 0,
-                 )
+            orig_load['LOADSEG.NAME'],
+            int(starttime.frac_year),
+            orig_load['TStart (GMT)'],
+            orig_load['TStop (GMT)'],
+            orig_load['LOADSEG.SCS'],
+            0,
+        )
         loads.append(load)
-    names = ('load_segment','year','datestart','datestop','load_scs','fixed_by_hand')
-    load_recs = np.rec.fromrecords( loads, names=names)
+    names = ('load_segment', 'year', 'datestart', 'datestop', 'load_scs', 'fixed_by_hand')
+    load_recs = np.rec.fromrecords(loads, names=names)
     load_recs = np.sort(load_recs, order=['datestart', 'load_scs'])
     return load_recs
 
 
-def check_load_overlap( loads, max_sep_hours=36):
+def check_load_overlap(loads, max_sep_hours=36):
     """
     Checks command load segment overlap
 
@@ -374,26 +374,26 @@ def check_load_overlap( loads, max_sep_hours=36):
     :rtype: None
     """
 
-    sep_times = ( DateTime(loads[1:]['datestart']).secs
-                  - DateTime(loads[:-1]['datestop']).secs )
+    sep_times = (DateTime(loads[1:]['datestart']).secs
+                 - DateTime(loads[:-1]['datestop']).secs)
     max_sep = max_sep_hours * 60 * 60
     # check for too much sep
-    if (any(sep_times > max_sep )):
+    if (any(sep_times > max_sep)):
         for load_idx in np.flatnonzero(sep_times > max_sep):
             log.warn('LOAD_SEG WARN: Loads %s %s separated by more than %i hours'
-                         % (loads[load_idx]['load_segment'],
-                            loads[load_idx+1]['load_segment'],
-                            max_sep_hours ))
+                     % (loads[load_idx]['load_segment'],
+                        loads[load_idx + 1]['load_segment'],
+                        max_sep_hours))
     # any SCS overlap
     for scs in (128, 129, 130, 131, 132, 133):
-        scs_loads = loads[ loads['load_scs'] == scs ]
-        scs_times = ( DateTime(scs_loads[1:]['datestart']).secs
-                      - DateTime(scs_loads[:-1]['datestop']).secs)
-        if (any(scs_times < 0 )):
+        scs_loads = loads[loads['load_scs'] == scs]
+        scs_times = (DateTime(scs_loads[1:]['datestart']).secs
+                     - DateTime(scs_loads[:-1]['datestop']).secs)
+        if (any(scs_times < 0)):
             log.warn('LOAD_SEG WARN: Same SCS loads overlap')
 
 
-def clear_timeline( id, dbh=None, dryrun=False ):
+def clear_timeline(id, dbh=None, dryrun=False):
     """
     Clear the commands related to a timeline and then delete the timeline.
 
@@ -407,7 +407,7 @@ def clear_timeline( id, dbh=None, dryrun=False ):
     for table in ('cmd_fltpars', 'cmd_intpars', 'cmds'):
         cmd = (""" DELETE from %s
                    WHERE timeline_id = %s """
-               % ( table, id ))
+               % (table, id))
         log.debug('TIMELINES DEBUG: ' + cmd)
         if not dryrun:
             dbh.execute(cmd)
@@ -422,7 +422,7 @@ def clear_timeline( id, dbh=None, dryrun=False ):
         dbh.execute(cmd)
 
 
-def clear_rel_timelines( load_segments, dbh=None, dryrun=False ):
+def clear_rel_timelines(load_segments, dbh=None, dryrun=False):
     """
     Remove timelines related to (fk constrained to) load_segments from the timelines db
 
@@ -431,18 +431,16 @@ def clear_rel_timelines( load_segments, dbh=None, dryrun=False ):
     """
     for load in load_segments:
         db_timelines = dbh.fetchall("SELECT * from timelines where load_segment_id = %i"
-                                   % ( load['id']))
+                                    % (load['id']))
 
         if len(db_timelines) > 0:
             if (any(db_timelines['fixed_by_hand'])):
-                for timeline in db_timelines[ db_timelines['fixed_by_hand'] == 1]:
+                for timeline in db_timelines[db_timelines['fixed_by_hand'] == 1]:
                     log.warn("LOAD_SEG WARN: updating timelines across %i which is fixed_by_hand"
                              % (timeline['id']))
 
             for timeline in db_timelines:
-                clear_timeline( timeline['id'], dbh=dbh, dryrun=dryrun )
-
-
+                clear_timeline(timeline['id'], dbh=dbh, dryrun=dryrun)
 
 
 def get_last_timeline(dbh=None):
@@ -471,7 +469,7 @@ def find_load_seg_changes(wants, haves, exclude=[]):
     i_diff = 0
     for want_entry, have_entry in zip(wants, haves):
         # does the db load match?
-        if (any(have_entry[x] != want_entry[x] for x in match_cols) ):
+        if (any(have_entry[x] != want_entry[x] for x in match_cols)):
             log.info('LOAD_SEG INFO: Mismatch on these entries:')
             log.info(want_entry)
             log.info(have_entry)
@@ -496,8 +494,7 @@ def find_load_seg_changes(wants, haves, exclude=[]):
     return to_delete, to_insert
 
 
-
-def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
+def update_loads_db(ifot_loads, dbh=None, test=False, dryrun=False,):
     """
     Update the load_segments table with the loads from an RDB file.
 
@@ -508,7 +505,7 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     """
 
     log.info("LOAD_SEG INFO: Updating Loads for range %s to %s"
-             % ( ifot_loads[0]['datestart'], ifot_loads[-1]['datestop']))
+             % (ifot_loads[0]['datestart'], ifot_loads[-1]['datestop']))
 
     # raise errors on some unexpected possibilities
     if len(ifot_loads) == 0:
@@ -517,10 +514,10 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
         raise ValueError("LOAD_SEG: only one load passed to update_loads_db()")
 
     # Tom doesn't want < year 2009 load segments to change ids etc
-    min_time_datestart ='2009:001:00:00:00.000'
+    min_time_datestart = '2009:001:00:00:00.000'
     if (ifot_loads[0]['datestart'] < min_time_datestart) and not test:
         raise ValueError("Attempting to update loads before %s"
-                         % min_time_datestart )
+                         % min_time_datestart)
 
     max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
     if max_id == 0 and test == False:
@@ -528,9 +525,9 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     db_loads = dbh.fetchall("""select * from load_segments
                                where datestart >= '%s'
                                order by datestart, load_scs""" % (
-                               ifot_loads[0]['datestart'],
-                               )
-                            )
+        ifot_loads[0]['datestart'],
+    )
+    )
 
     # if no overlap on time range, check for an empty table (which should be OK)
     if len(db_loads) == 0:
@@ -558,12 +555,12 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
     if not dryrun:
         for load in to_delete:
             cmd = ("DELETE FROM load_segments WHERE id = %d"
-                   % load['id'] )
+                   % load['id'])
             log.info('LOAD_SEG INFO: ' + cmd)
             dbh.execute(cmd)
 
     # check for overlap in the loads... the check_load_overlap just logs warnings
-    check_load_overlap( ifot_loads )
+    check_load_overlap(ifot_loads)
 
     # Insert new loads[i_diff:] into load_segments
     #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
@@ -571,20 +568,18 @@ def update_loads_db( ifot_loads, dbh=None, test=False, dryrun=False,):
 
     for load_count, load in enumerate(to_insert):
         log.debug('LOAD_SEG DEBUG: inserting load')
-        insert_string = "\t %s %d %s %s %d" % ( load['load_segment'], load['year'],
-                                             load['datestart'], load['datestop'], load['load_scs'] )
+        insert_string = "\t %s %d %s %s %d" % (load['load_segment'], load['year'],
+                                               load['datestart'], load['datestop'], load['load_scs'])
         log.debug(insert_string)
         load_dict = dict(zip(load.dtype.names, load))
-        load_dict['id'] = max_id + 1 + load_count;
+        load_dict['id'] = max_id + 1 + load_count
         if not dryrun:
             dbh.insert(load_dict, 'load_segments', commit=True)
     return to_insert
 
 
-
-
 def main(loadseg_rdb_dir, dryrun=False, test=False,
-         server='db_base.db3' ,database=None, user=None, verbose=False):
+         server='db_base.db3', database=None, user=None, verbose=False):
     """
     Command Load Segment Table Updater
 
@@ -615,38 +610,28 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
     all_rdb_files = glob.glob(os.path.join(loadseg_dir, "*"))
     rdb_file = max(all_rdb_files)
     log.debug("LOAD_SEG DEBUG: Updating from %s" % rdb_file)
-    orig_rdb_loads = Ska.Table.read_ascii_table(rdb_file, datastart=3)
-    ifot_loads = rdb_to_db_schema( orig_rdb_loads )
+    orig_rdb_loads = Table.read(rdb_file)
+    ifot_loads = rdb_to_db_schema(orig_rdb_loads)
     if len(ifot_loads):
-        # make any scripted edits to the tables of parsed files to override directory
-        # mapping
-        import fix_tl_processing
-        fix_tl_processing.repair(dbh)
-        # make any scripted edits to the load segments table
-        import fix_load_segments
-        ifot_loads = fix_load_segments.repair(ifot_loads)
         max_timelines_id = dbh.fetchone(
             'SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
         if max_timelines_id == 0 and test == False:
             raise ValueError("TIMELINES: no timelines in database.")
-        update_loads_db( ifot_loads, dbh=dbh, test=test, dryrun=dryrun )
+        update_loads_db(ifot_loads, dbh=dbh, test=test, dryrun=dryrun)
         db_loads = dbh.fetchall("""select * from load_segments
                                    where datestart >= '%s' order by datestart
-                                  """ % ( ifot_loads[0]['datestart'] )
+                                  """ % (ifot_loads[0]['datestart'])
                                 )
         update_timelines_db(loads=db_loads, dbh=dbh, max_id=max_timelines_id,
                             dryrun=dryrun, test=test)
 
     log.removeHandler(ch)
 
+
 if __name__ == "__main__":
 
-    (opt,args) = get_options()
+    (opt, args) = get_options()
     main(opt.loadseg_rdb_dir, dryrun=opt.dryrun,
-             test=opt.test, server=opt.server,
-             database=opt.database, user=opt.user,
-             verbose=opt.verbose)
-
-
-
-
+         test=opt.test, server=opt.server,
+         database=opt.database, user=opt.user,
+         verbose=opt.verbose)
