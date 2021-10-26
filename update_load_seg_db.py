@@ -64,7 +64,7 @@ def get_built_load(run_load, dbh=None):
     if built is None:
         match_like = re.search(r'(CL\d{3}:\d{4})', run_load['load_segment'])
         if match_like is None:
-            raise ValueError("Load name %s is in unknown form, expects /CL\d{3}:\d{4}/" %
+            raise ValueError("Load name %s is in unknown form, expects /CL\\d{3}:\\d{4}/" %
                              run_load['load_segment'])
         like_load = match_like.group(1)
         built_query = ("""select * from tl_built_loads where load_segment like '%s%s%s'
@@ -103,9 +103,9 @@ def get_replan_dir(replan_seg, run_datestart, dbh=None):
     :param run_datestart: datestart of the new/replanned load
     :rtype: directory name string
     """
-    match_like = re.search('C(\d{3}).?(\d{4})', replan_seg)
+    match_like = re.search(r'C(\d{3}).?(\d{4})', replan_seg)
     if match_like is None:
-        raise ValueError("Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
+        raise ValueError(r"Replan load seg %s is in unknown form, expects /C\d{3}?\d{4}/" %
                          replan_seg)
     # get_replan_dirs is called on a text string from the command load generation processing
     # summary that was the "replan source" and then this is trying to match up that source to
@@ -296,7 +296,7 @@ def update_timelines_db(loads, dbh, max_id, dryrun=False, test=False):
                 break
             i_diff += 1
     else:
-       i_diff = 0
+        i_diff = 0
 
     # Mismatch occured at i_diff.
 
@@ -309,8 +309,8 @@ def update_timelines_db(loads, dbh, max_id, dryrun=False, test=False):
         time_length = DateTime(run_timeline['datestop']).secs - \
             DateTime(run_timeline['datestart']).secs
         if time_length / 60. < 60:
-            log.warn("TIMELINES WARN: short timeline at %s, %d minutes" % (run_timeline['datestart'],
-                                                                           time_length / 60.))
+            log.warn("TIMELINES WARN: short timeline at %s, %d minutes"
+                     % (run_timeline['datestart'], time_length / 60.))
     # find all db timelines that start after the last valid one [i_diff-1]
     findcmd = ("""SELECT id from timelines
                   WHERE datestart > '%s'
@@ -520,7 +520,7 @@ def update_loads_db(ifot_loads, dbh=None, test=False, dryrun=False,):
                          % min_time_datestart)
 
     max_id = dbh.fetchone('SELECT max(id) AS max_id FROM load_segments')['max_id'] or 0
-    if max_id == 0 and test == False:
+    if max_id == 0 and not test:
         raise ValueError("LOAD SEG: no load_segments in database.")
     db_loads = dbh.fetchall("""select * from load_segments
                                where datestart >= '%s'
@@ -563,13 +563,14 @@ def update_loads_db(ifot_loads, dbh=None, test=False, dryrun=False,):
     check_load_overlap(ifot_loads)
 
     # Insert new loads[i_diff:] into load_segments
-    #log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
+    # log.info('LOAD_SEG INFO: inserting load_segs[%d:%d] to load_segments' %
     #              (i_diff, len(ifot_loads)+1))
 
     for load_count, load in enumerate(to_insert):
         log.debug('LOAD_SEG DEBUG: inserting load')
         insert_string = "\t %s %d %s %s %d" % (load['load_segment'], load['year'],
-                                               load['datestart'], load['datestop'], load['load_scs'])
+                                               load['datestart'], load['datestop'],
+                                               load['load_scs'])
         log.debug(insert_string)
         load_dict = dict(zip(load.dtype.names, load))
         load_dict['id'] = max_id + 1 + load_count
@@ -615,7 +616,7 @@ def main(loadseg_rdb_dir, dryrun=False, test=False,
     if len(ifot_loads):
         max_timelines_id = dbh.fetchone(
             'SELECT max(id) AS max_id FROM timelines')['max_id'] or 0
-        if max_timelines_id == 0 and test == False:
+        if max_timelines_id == 0 and not test:
             raise ValueError("TIMELINES: no timelines in database.")
         update_loads_db(ifot_loads, dbh=dbh, test=test, dryrun=dryrun)
         db_loads = dbh.fetchall("""select * from load_segments
